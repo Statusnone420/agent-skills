@@ -1,0 +1,56 @@
+{
+  "name": "statusnone-agent-skills",
+  "interface": {
+    "displayName": "Statusnone Agent Skills"
+  },
+  "plugins": [
+    {
+      "name": "engineering-workflows",
+      "source": {
+        "source": "local",
+        "path": "./plugins/engineering-workflows"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "communication-tools",
+      "source": {
+        "source": "local",
+        "path": "./plugins/communication-tools"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "agent-control",
+      "source": {
+        "source": "local",
+        "path": "./plugins/agent-control"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    },
+    {
+      "name": "frontend-design",
+      "source": {
+        "source": "local",
+        "path": "./plugins/frontend-design"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

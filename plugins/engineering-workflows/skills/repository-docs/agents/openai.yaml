@@ -1,0 +1,8 @@
+interface:
+  display_name: "Repository Docs"
+  short_description: "Map and retrieve trustworthy repository guidance"
+  default_prompt: "Use $repository-docs to map this repository's documentation and load the guidance needed for my task."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: false

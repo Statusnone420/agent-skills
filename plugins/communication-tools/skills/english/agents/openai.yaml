@@ -1,0 +1,8 @@
+interface:
+  display_name: "English"
+  short_description: "Plain-English rescue for technical explanations"
+  default_prompt: "Use $english to explain the selected text or current situation in plain language without taking action."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: false

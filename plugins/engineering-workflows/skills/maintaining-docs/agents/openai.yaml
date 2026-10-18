@@ -1,0 +1,8 @@
+interface:
+  display_name: "Maintaining Docs"
+  short_description: "Create and update evidence-backed repository docs"
+  default_prompt: "Use $maintaining-docs to update this repository's documentation from the verified change."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: false

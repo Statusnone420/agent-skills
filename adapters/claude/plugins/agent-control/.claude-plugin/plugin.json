@@ -1,0 +1,18 @@
+{
+  "name": "agent-control",
+  "version": "0.3.1",
+  "description": "Manual-only native subagent orchestration and adaptive software-development discipline.",
+  "author": {
+    "name": "Statusnone"
+  },
+  "homepage": "https://github.com/Statusnone420/agent-skills",
+  "repository": "https://github.com/Statusnone420/agent-skills",
+  "license": "MIT",
+  "keywords": [
+    "workflow",
+    "orchestration",
+    "delegation",
+    "superpowers",
+    "verification"
+  ]
+}

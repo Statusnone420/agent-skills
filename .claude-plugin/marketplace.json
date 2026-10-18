@@ -1,0 +1,45 @@
+{
+  "name": "statusnone-agent-skills",
+  "owner": {
+    "name": "Statusnone"
+  },
+  "description": "Explicit-only personal workflows maintained by Statusnone.",
+  "plugins": [
+    {
+      "name": "engineering-workflows",
+      "source": "./adapters/claude/plugins/engineering-workflows",
+      "description": "Manual engineering, debugging, comment discipline, design, planning, and review workflows.",
+      "version": "0.5.1",
+      "author": {
+        "name": "Statusnone"
+      }
+    },
+    {
+      "name": "communication-tools",
+      "source": "./adapters/claude/plugins/communication-tools",
+      "description": "Manual-only plain-English and concise communication assistance.",
+      "version": "0.4.1",
+      "author": {
+        "name": "Statusnone"
+      }
+    },
+    {
+      "name": "agent-control",
+      "source": "./adapters/claude/plugins/agent-control",
+      "description": "Manual-only native subagent orchestration and adaptive software-development discipline.",
+      "version": "0.3.1",
+      "author": {
+        "name": "Statusnone"
+      }
+    },
+    {
+      "name": "frontend-design",
+      "source": "./adapters/claude/plugins/frontend-design",
+      "description": "Manual-only distinctive interface-design guidance.",
+      "version": "0.1.1",
+      "author": {
+        "name": "Statusnone"
+      }
+    }
+  ]
+}

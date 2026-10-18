@@ -1,0 +1,38 @@
+{
+  "name": "communication-tools",
+  "version": "0.4.1",
+  "description": "Explicit-only tools for clearer, denser technical communication.",
+  "author": {
+    "name": "Statusnone",
+    "url": "https://github.com/Statusnone420"
+  },
+  "repository": "https://github.com/Statusnone420/agent-skills",
+  "license": "MIT",
+  "keywords": [
+    "communication",
+    "plain-english",
+    "concise",
+    "explanation"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Communication Tools",
+    "shortDescription": "Manual clear communication",
+    "longDescription": "Two explicit-only tools for plain-English rescue and compression without loss.",
+    "composerIcon": "./assets/plugin-icon.png",
+    "logo": "./assets/plugin-icon.png",
+    "logoDark": "./assets/plugin-icon.png",
+    "brandColor": "#7C4DFF",
+    "developerName": "Statusnone",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive",
+      "Read"
+    ],
+    "websiteURL": "https://github.com/Statusnone420/agent-skills",
+    "defaultPrompt": [
+      "Use $english to explain this in plain language.",
+      "Use $concise to compress this answer without losing important information."
+    ]
+  }
+}

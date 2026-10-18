@@ -1,0 +1,20 @@
+{
+  "name": "engineering-workflows",
+  "version": "0.5.1",
+  "description": "Explicit-only engineering, debugging, comment discipline, design, planning, contract review, and documentation workflows.",
+  "author": {
+    "name": "Statusnone"
+  },
+  "homepage": "https://github.com/Statusnone420/agent-skills",
+  "repository": "https://github.com/Statusnone420/agent-skills",
+  "license": "MIT",
+  "keywords": [
+    "engineering",
+    "debugging",
+    "comments",
+    "tdd",
+    "planning",
+    "domain-modeling",
+    "reasoning"
+  ]
+}

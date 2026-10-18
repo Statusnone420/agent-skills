@@ -1,0 +1,38 @@
+{
+  "name": "frontend-design",
+  "version": "0.1.1",
+  "description": "Statusnone-maintained guidance for distinctive, intentional interface design.",
+  "author": {
+    "name": "Statusnone",
+    "url": "https://github.com/Statusnone420"
+  },
+  "repository": "https://github.com/Statusnone420/agent-skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "frontend",
+    "design",
+    "ui",
+    "ux",
+    "visual-direction"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Frontend Design",
+    "shortDescription": "Distinctive intentional interface design",
+    "longDescription": "An explicit-only Statusnone-maintained Codex and Claude adaptation for opinionated, subject-specific interface design.",
+    "composerIcon": "./assets/plugin-icon.png",
+    "logo": "./assets/plugin-icon.png",
+    "logoDark": "./assets/plugin-icon.png",
+    "brandColor": "#8B5CF6",
+    "developerName": "Statusnone",
+    "category": "Design",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/Statusnone420/agent-skills",
+    "defaultPrompt": [
+      "Use $frontend-design to give this interface a distinctive visual direction."
+    ]
+  }
+}

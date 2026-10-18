@@ -1,0 +1,8 @@
+interface:
+  display_name: "Orchestrate"
+  short_description: "Coordinate focused subagents"
+  default_prompt: "Use $orchestrate to delegate bounded supporting work while keeping decisions and integration in the parent."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: false

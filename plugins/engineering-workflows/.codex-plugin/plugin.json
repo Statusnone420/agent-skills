@@ -1,0 +1,43 @@
+{
+  "name": "engineering-workflows",
+  "version": "0.5.1",
+  "description": "Explicit-only engineering, debugging, comment discipline, design, planning, contract review, and documentation workflows.",
+  "author": {
+    "name": "Statusnone",
+    "url": "https://github.com/Statusnone420"
+  },
+  "repository": "https://github.com/Statusnone420/agent-skills",
+  "license": "MIT",
+  "keywords": [
+    "engineering",
+    "debugging",
+    "comments",
+    "tdd",
+    "planning",
+    "domain-modeling",
+    "reasoning"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Engineering Workflows",
+    "shortDescription": "Manual engineering and planning workflows",
+    "longDescription": "Ten explicit-only workflows for planning, domain modeling, debugging, comment discipline, TDD, codebase design, conceptual and contract review, and repository documentation.",
+    "composerIcon": "./assets/plugin-icon.png",
+    "logo": "./assets/plugin-icon.png",
+    "logoDark": "./assets/plugin-icon.png",
+    "brandColor": "#6D4AFF",
+    "developerName": "Statusnone",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/Statusnone420/agent-skills",
+    "defaultPrompt": [
+      "Use $grill-me to stress-test this plan.",
+      "Use $diagnosing-bugs to diagnose this issue.",
+      "Use $comment-discipline to prevent comment-backed shortcuts and clean up comment debt in this scope."
+    ]
+  }
+}
