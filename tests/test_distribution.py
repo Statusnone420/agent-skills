@@ -409,6 +409,28 @@ class DistributionTests(unittest.TestCase):
         apache = (ROOT / "skills" / "frontend-design" / "LICENSE.txt").read_text(encoding="utf-8")
         self.assertIn("Apache License", apache)
 
+    def test_every_copy_of_an_adapted_skill_carries_its_license(self) -> None:
+        # Single skill folders leave the repository on their own: uploads, Cursor copies, and plugin
+        # installs. So each folder that adapts third-party work keeps that work's license.
+        licenses = {
+            "codebase-design": ROOT / "LICENSE",
+            "diagnosing-bugs": ROOT / "LICENSE",
+            "frontend-design": ROOT / "skills/frontend-design/LICENSE.txt",
+        }
+        copies = (
+            ROOT / "skills",
+            ROOT / "adapters/codex/plugins" / SUITE / "skills",
+            ROOT / "adapters/claude/plugins" / SUITE / "skills",
+            GROK_BOT_BUNDLE / "skills",
+        )
+        for root in copies:
+            for name, license_file in licenses.items():
+                copy = root / name / "LICENSE.txt"
+                self.assertTrue(copy.is_file(), copy)
+                self.assertEqual(
+                    license_file.read_text(encoding="utf-8"), copy.read_text(encoding="utf-8"), copy
+                )
+
     def test_distribution_contains_no_workflow_hooks(self) -> None:
         roots = [ROOT / "skills", ROOT / "adapters"]
         matches = [

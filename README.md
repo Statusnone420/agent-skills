@@ -264,6 +264,8 @@ establish runtime acceptance on the other.
 
 See [ORIGIN.md](ORIGIN.md), [NOTICE.md](NOTICE.md), and [LICENSE](LICENSE). Most of this repository is
 MIT licensed. `skills/frontend-design/` is an Apache-2.0 adaptation and keeps its own `LICENSE.txt`,
-so the plugin manifests declare `MIT AND Apache-2.0`. The Grok Bot bundle is copied out of the
-repository on its own, so it carries copies of `LICENSE`, `NOTICE.md`, and `ORIGIN.md`. Third-party
-inspirations and adaptations are attributed without implying endorsement.
+so the plugin manifests declare `MIT AND Apache-2.0`. `codebase-design` and `diagnosing-bugs` adapt
+MIT-licensed work, so each keeps a copy of `LICENSE` as `LICENSE.txt`. That way, every adapted skill
+keeps its license when you upload or copy its folder on its own. The Grok Bot bundle is copied out of
+the repository on its own, so it carries copies of `LICENSE`, `NOTICE.md`, and `ORIGIN.md`.
+Third-party inspirations and adaptations are attributed without implying endorsement.
