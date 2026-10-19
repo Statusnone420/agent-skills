@@ -183,7 +183,7 @@ class DistributionTests(unittest.TestCase):
         codex = ROOT / "plugins" / SUITE / "skills/orchestrate"
         claude = ROOT / "adapters/claude/plugins" / SUITE / "skills/orchestrate"
         self.assertEqual((source / "SKILL.md").read_bytes(), (codex / "SKILL.md").read_bytes())
-        native = (source / "variants/claude.md").read_text(encoding="utf-8")
+        native = (source / "variants/claude.SKILL.md").read_text(encoding="utf-8")
         generated = (claude / "SKILL.md").read_text(encoding="utf-8")
         self.assertEqual(native, generated.replace("disable-model-invocation: true\n", "", 1))
         self.assertNotEqual(native, (source / "SKILL.md").read_text(encoding="utf-8"))
@@ -191,7 +191,14 @@ class DistributionTests(unittest.TestCase):
             self.assertNotIn(token, native)
         for folder in (codex, claude):
             self.assertFalse((folder / "variants").exists())
-        self.assertEqual({"claude.md"}, {p.name for p in (source / "variants").iterdir()})
+        self.assertEqual({"claude.SKILL.md"}, {p.name for p in (source / "variants").iterdir()})
+
+    def test_no_skill_file_is_named_like_a_host_instruction_file(self) -> None:
+        # Hosts auto-load these names, and Windows and macOS ignore case.
+        instruction_files = {"agents.md", "agents.local.md", "agents.override.md", "claude.md", "claude.local.md"}
+        for root in (ROOT / "skills", ROOT / "plugins", ROOT / "adapters"):
+            for path in root.rglob("*"):
+                self.assertNotIn(path.name.lower(), instruction_files, path)
 
     def test_retired_hosts_are_absent_from_active_distribution(self) -> None:
         self.assertEqual({"claude"}, directory_names(ROOT / "adapters"))

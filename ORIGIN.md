@@ -28,12 +28,15 @@ were retired; their artwork is preserved under `assets/retired-skills/`.
 ## Frontend Design
 
 `skills/frontend-design/` is a Statusnone-maintained Codex and Claude Code adaptation of Anthropic's
-[`frontend-design`](https://github.com/anthropics/skills/tree/main/skills/frontend-design) skill.
+[`frontend-design`](https://github.com/anthropics/skills/tree/main/skills/frontend-design) skill,
+last refreshed against upstream commit `41bbe19d1a1a7eaab5e7bb9050a417e5c6cffc8f` (September 2026).
 The upstream work is licensed under Apache License 2.0. Its complete license is retained at
 `skills/frontend-design/LICENSE.txt` and is copied into each generated adapter.
 
-Statusnone modifications include Codex-oriented wording and workflow refinements, host invocation
-metadata, plugin packaging, and original artwork.
+Statusnone modifications include Codex-oriented wording and workflow refinements, a rule-first
+rewrite, a WCAG 2.2 AA accessibility floor, a sourced list of AI-looking defaults, verification
+steps, host invocation metadata, plugin packaging, and original artwork. The skill file itself
+carries a short notice of these changes.
 
 ## Superpowers
 

@@ -18,7 +18,9 @@ Status: done in October 2026. This page records the outcome and the open follow-
 
 ## Follow-ups
 
-- Refresh `frontend-design` against the current upstream skill and WCAG 2.2 AA basics.
-- Document how to load the suite in each host, and mark the steps that are not verified.
+- Done in version 1.1.0: `frontend-design` refreshed against upstream commit `41bbe19` and WCAG 2.2
+  AA basics, and the README now explains how to load the suite in each host.
+- Test the steps the README marks as unverified, starting with the Codex `$` skill name and the
+  Cursor Grok Bot route.
 - After each release, check the installed copies on every Windows and Mac machine. Repository checks
   do not prove runtime behavior.

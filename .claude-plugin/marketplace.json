@@ -9,7 +9,7 @@
       "name": "agent-skills",
       "source": "./adapters/claude/plugins/agent-skills",
       "description": "Focused peer skills for codebase design, debugging, reviews, docs, plain English, frontend design, and subagents.",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "Statusnone"
       }

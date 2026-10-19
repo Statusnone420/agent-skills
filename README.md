@@ -52,6 +52,74 @@ authorization, and final verification in the parent. Model roles are not tied to
 When a requested choice is unavailable, the agent reports the limitation instead of silently
 substituting. The Claude Code variant contains no Codex model names or custom agent framework.
 
+## Load the skills
+
+**Checked** means this repository's own checks, a host's CLI help, or a host's validator confirmed
+it. **Docs** means it comes from the host's documentation but was not run end to end here.
+**Unverified** means it is our best reading and still needs a real test.
+
+### Claude Code (terminal, IDE, and the Code tab in Claude Desktop)
+
+```sh
+claude plugin marketplace add Statusnone420/agent-skills
+claude plugin install agent-skills@statusnone-agent-skills
+```
+
+In a session on Claude Code 2.1.275 or later, one line works too:
+`/plugin install agent-skills --marketplace Statusnone420/agent-skills`. Update with
+`claude plugin marketplace update statusnone-agent-skills`, then
+`claude plugin update agent-skills@statusnone-agent-skills`. Call a skill with
+`/agent-skills:english`. **Checked:** command names and strict plugin validation.
+
+### Claude on the web and Claude Desktop chat
+
+Zip one folder from `skills/`, such as `skills/concise/`, so that the zip holds that folder with its
+`SKILL.md`. Upload it in **Customize → Skills** and switch it on. Upload from `skills/`, not
+`adapters/`: uploads reject the `disable-model-invocation` line in the Claude Code copies, so
+uploaded skills can always load on their own. Skip `english` and `orchestrate` there. **Docs.**
+Claude Desktop chat uses the skills on your claude.ai account. **Unverified.**
+
+### Codex (CLI and the Codex app)
+
+```sh
+codex plugin marketplace add Statusnone420/agent-skills
+codex plugin add agent-skills@statusnone-agent-skills
+```
+
+You can also install from `/plugins` in a session. Start a new session after installing, and refresh
+later with `codex plugin marketplace upgrade`. Pick a skill with `$`. **Checked:** command names
+(Codex CLI 0.162.1 help) and every skill with `quick_validate.py`. **Unverified:** the app steps and
+the `agent-skills:english` name that Codex source code gives plugin skills. The IDE extension does
+not support plugins. **Docs.**
+
+### ChatGPT
+
+Eligible Business, Enterprise, Healthcare, and Edu workspaces can add skills in **Plugins → Plugin
+Directory → Skills → Create → Upload from your computer**. Upload a zipped folder from `skills/`.
+**Docs**; the zip format is **Unverified**. Workspace admins can also import this repository's Codex
+marketplace. **Docs.** On other plans, use Codex.
+
+### Grok Build CLI
+
+```sh
+grok plugin marketplace add Statusnone420/agent-skills
+grok plugin install agent-skills --trust
+```
+
+Grok reads the Claude Code marketplace, so it needs no separate copy. Plugins start disabled:
+enable `agent-skills` in the Plugins tab or list it under `[plugins] enabled` in
+`~/.grok/config.toml`. Call a skill with `/agent-skills:english`. **Checked:** `grok plugin validate`
+accepts the plugin. **Docs:** the install and enable steps.
+
+### Cursor and Cursor Grok Bots
+
+- **Cursor agents**, including Grok models in Cursor: copy the folders in
+  `adapters/claude/plugins/agent-skills/skills/` to `~/.cursor/skills/` for every project, or to
+  `.cursor/skills/` for one. Use these copies because Cursor honors their
+  `disable-model-invocation` line. **Docs.**
+- **Cursor Grok Bots** (the separate Grok Bot app): Cursor documents no skill-folder or plugin
+  import. Paste a skill's `SKILL.md` into the Bot and ask it to save it as a skill. **Unverified.**
+
 ## Upgrading from the four plugins
 
 Until October 2026 this repository shipped four plugins: Engineering Workflows, Communication Tools,
@@ -72,9 +140,19 @@ claude plugin install agent-skills@statusnone-agent-skills
 New installs on Claude Code 2.1.275 or later can use one line in a session:
 `/plugin install agent-skills --marketplace Statusnone420/agent-skills`.
 
-Codex: refresh the `statusnone-agent-skills` marketplace, remove the four old plugins in
-`/plugins`, install `agent-skills`, and start a new session. These Codex steps follow Codex's
-documentation and have not been tested here.
+Codex, removing only the old plugins you have:
+
+```sh
+codex plugin marketplace upgrade
+codex plugin remove engineering-workflows@statusnone-agent-skills
+codex plugin remove communication-tools@statusnone-agent-skills
+codex plugin remove agent-control@statusnone-agent-skills
+codex plugin remove frontend-design@statusnone-agent-skills
+codex plugin add agent-skills@statusnone-agent-skills
+```
+
+Then start a new session. The command names come from the CLI help; the upgrade itself has not been
+run here.
 
 ## Distribution model
 
@@ -140,8 +218,8 @@ canonical and generated Codex skills with Codex's `quick_validate.py`, and the C
 
 ## Releases and installed copies
 
-Version `1.0.0` is the first `agent-skills` release. Repository updates and installed plugin caches
-are separate. After an approved release, refresh the marketplace and update the installed plugin
+Version `1.1.0` refreshes `frontend-design` and adds the load instructions above. Version `1.0.0` was
+the first `agent-skills` release. Repository updates and installed plugin caches are separate. After an approved release, refresh the marketplace and update the installed plugin
 through each host's plugin manager. Restart the host or use a fresh session, then verify the
 selected skill path and contents. Do not edit cached skills by hand. Each Windows or Mac
 installation must be checked separately; passing repository checks on one machine does not
