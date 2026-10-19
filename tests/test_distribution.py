@@ -63,7 +63,7 @@ class DistributionTests(unittest.TestCase):
         self.assertTrue(single[0].startswith("changed: "), single)
 
     def test_skill_files_stay_under_16_kb(self) -> None:
-        for root in (ROOT / "skills", ROOT / "plugins", ROOT / "adapters"):
+        for root in (ROOT / "skills", ROOT / "adapters"):
             for path in root.rglob("*"):
                 if path.is_file() and path.suffix != ".png":
                     self.assertLess(path.stat().st_size, MAX_SKILL_FILE_BYTES, path)
@@ -72,7 +72,7 @@ class DistributionTests(unittest.TestCase):
         self.assertEqual([SUITE], list(PLUGINS))
         self.assertEqual(ALL_SKILLS, directory_names(ROOT / "skills"))
         self.assertEqual(sorted(ALL_SKILLS), sorted(PLUGINS[SUITE].skills))
-        for folder in ("plugins", "adapters/claude/plugins", "assets/plugins"):
+        for folder in ("adapters/codex/plugins", "adapters/claude/plugins", "assets/plugins"):
             self.assertEqual({SUITE}, directory_names(ROOT / folder), folder)
 
     def test_manual_only_skills_are_deliberate(self) -> None:
@@ -80,9 +80,9 @@ class DistributionTests(unittest.TestCase):
 
     def test_invocation_settings_match_catalog(self) -> None:
         for name, skill in SKILLS.items():
-            codex = (ROOT / "plugins" / SUITE / "skills" / name / "agents" / "openai.yaml").read_text(
-                encoding="utf-8"
-            )
+            codex = (
+                ROOT / "adapters/codex/plugins" / SUITE / "skills" / name / "agents" / "openai.yaml"
+            ).read_text(encoding="utf-8")
             self.assertIn(f"allow_implicit_invocation: {str(skill.implicit).lower()}", codex, name)
             self.assertIn('icon_small: "./assets/icon.png"', codex, name)
             self.assertIn('icon_large: "./assets/icon.png"', codex, name)
@@ -165,6 +165,16 @@ class DistributionTests(unittest.TestCase):
             self.assertEqual(entry["version"], manifest["version"])
             self.assertTrue((plugin_root / "skills").is_dir(), entry["name"])
 
+    def test_only_claude_copies_sit_where_grok_looks(self) -> None:
+        # Grok Build loads plugins/<name>/ from Claude Code's copy of this repository and ignores the
+        # marketplace source, so another host's copy there would lose the Claude-only settings.
+        claude_marketplace = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
+        sources = {entry["name"]: (ROOT / entry["source"]).resolve() for entry in claude_marketplace["plugins"]}
+        convention = ROOT / "plugins"
+        folders = [path for path in convention.iterdir() if path.is_dir()] if convention.is_dir() else []
+        for folder in folders:
+            self.assertEqual(sources.get(folder.name), folder.resolve(), folder)
+
     def test_merged_skills_keep_specialist_behavior(self) -> None:
         review = (ROOT / "skills/conceptual-review/SKILL.md").read_text(encoding="utf-8")
         for marker in ("Reasoning mode", "Spec mode", "Acceptance power", "BLOCKING", "AMEND", "NIT", "**Ready**"):
@@ -180,7 +190,7 @@ class DistributionTests(unittest.TestCase):
 
     def test_orchestrate_uses_host_native_variants(self) -> None:
         source = ROOT / "skills/orchestrate"
-        codex = ROOT / "plugins" / SUITE / "skills/orchestrate"
+        codex = ROOT / "adapters/codex/plugins" / SUITE / "skills/orchestrate"
         claude = ROOT / "adapters/claude/plugins" / SUITE / "skills/orchestrate"
         self.assertEqual((source / "SKILL.md").read_bytes(), (codex / "SKILL.md").read_bytes())
         native = (source / "variants/claude.SKILL.md").read_text(encoding="utf-8")
@@ -196,12 +206,12 @@ class DistributionTests(unittest.TestCase):
     def test_no_skill_file_is_named_like_a_host_instruction_file(self) -> None:
         # Hosts auto-load these names, and Windows and macOS ignore case.
         instruction_files = {"agents.md", "agents.local.md", "agents.override.md", "claude.md", "claude.local.md"}
-        for root in (ROOT / "skills", ROOT / "plugins", ROOT / "adapters"):
+        for root in (ROOT / "skills", ROOT / "adapters"):
             for path in root.rglob("*"):
                 self.assertNotIn(path.name.lower(), instruction_files, path)
 
     def test_retired_hosts_are_absent_from_active_distribution(self) -> None:
-        self.assertEqual({"claude"}, directory_names(ROOT / "adapters"))
+        self.assertEqual({"claude", "codex"}, directory_names(ROOT / "adapters"))
         self.assertFalse((ROOT / ".cursor-plugin").exists())
         self.assertFalse((ROOT / "marketplace.json").exists())
 
@@ -246,7 +256,7 @@ class DistributionTests(unittest.TestCase):
         self.assertIn("Apache License", apache)
 
     def test_distribution_contains_no_workflow_hooks(self) -> None:
-        roots = [ROOT / "skills", ROOT / "plugins", ROOT / "adapters"]
+        roots = [ROOT / "skills", ROOT / "adapters"]
         matches = [
             path
             for root in roots

@@ -11,7 +11,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "skills"
 PLUGIN_ASSETS = ROOT / "assets" / "plugins"
-CODEX_PLUGINS = ROOT / "plugins"
+# Grok Build loads plugins/<name>/ from Claude Code's copy of this repository and ignores the
+# marketplace source, so no other host's copy may live there.
+CODEX_PLUGINS = ROOT / "adapters" / "codex" / "plugins"
 CLAUDE_PLUGINS = ROOT / "adapters" / "claude" / "plugins"
 CODEX_MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
 CLAUDE_MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"

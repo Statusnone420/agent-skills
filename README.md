@@ -34,8 +34,7 @@ that plugin; there are no sub-plugins.
 **On its own** means the agent loads the skill when a request matches its description. You can also
 call it by name. **Manual only** means the skill runs only when you call it: `orchestrate` starts
 subagents, which cost time and tokens, and `english` refuses tool use, which would stop real work if
-it fired by itself. Grok Build is an exception when Claude Code also has the plugin; see
-[Grok Build CLI](#grok-build-cli).
+it fired by itself.
 
 ## Calling a skill
 
@@ -119,13 +118,16 @@ marketplace, Grok sees it too and the first line fails with "already configured"
 start disabled. `grok plugin enable` lists `agent-skills` under `[plugins] enabled` in
 `~/.grok/config.toml`; the Plugins tab works too. Call a skill with `/agent-skills:english`.
 **Checked** on Grok 1.0.52 with Claude Code installed: install, enable, `/agent-skills:english`, and
-`diagnosing-bugs` loading on its own. `grok plugin validate` accepts the plugin. **Docs:** the
-Plugins tab. **Unverified:** Grok without Claude Code.
+`diagnosing-bugs` loading on its own. With Claude Code's copy of this repository at the current
+layout, `english` and `orchestrate` were not among the skills the model could call, and a
+plain-English question did not load `english`. `grok plugin validate` accepts the plugin. **Docs:**
+the Plugins tab. **Unverified:** installing on a machine without Claude Code.
 
-When Claude Code also has `agent-skills` installed, Grok loads the skills from Claude Code's copy of
-this repository at `plugins/agent-skills/`. That is the Codex copy, which has no
-`disable-model-invocation` line, so `english` and `orchestrate` can load on their own in Grok.
-**Checked** on Grok 1.0.52. Whether Grok honors that line without Claude Code is **Unverified**.
+`grok inspect` shows that Grok looks first for `plugins/<name>/` in Claude Code's copy of this
+repository and ignores the marketplace `source`. Older copies held the Codex plugin there, which has
+no `disable-model-invocation` line, so `english` and `orchestrate` could load on their own. If
+`grok inspect` lists the skills under `marketplaces/statusnone-agent-skills/plugins/agent-skills/`,
+refresh that copy with `claude plugin marketplace update statusnone-agent-skills`.
 
 ### Cursor and Cursor Grok Bots
 
@@ -175,7 +177,7 @@ plugins with `agent-skills` 1.1.0.
 ```mermaid
 flowchart LR
     S["Canonical skills<br/>skills/"] --> B["Catalog and builder<br/>tools/build_adapters.py"]
-    B --> C["Codex plugin<br/>plugins/agent-skills/"]
+    B --> C["Codex plugin<br/>adapters/codex/plugins/agent-skills/"]
     B --> A["Claude Code plugin<br/>adapters/claude/plugins/agent-skills/"]
     B --> M["Marketplaces<br/>.agents/plugins/ · .claude-plugin/"]
 ```
@@ -183,7 +185,9 @@ flowchart LR
 `skills/` is the only canonical workflow source. Suite metadata and each skill's invocation mode
 live in one catalog at the top of `tools/build_adapters.py`. Host copies, plugin manifests, and both
 marketplace files are generated and must never be edited by hand. Mac uses the same packages and
-needs no separate adapter.
+needs no separate adapter. The Codex plugin stays out of a top-level `plugins/` folder: Grok Build
+loads that folder from Claude Code's copy of this repository and ignores the marketplace `source`. A
+test enforces this.
 
 ## Repository map
 
@@ -191,7 +195,7 @@ needs no separate adapter.
 |---|---|
 | `skills/` | Canonical skill instructions, assets, and host variants. |
 | `tools/build_adapters.py` | Suite catalog and the builder for every generated file. |
-| `plugins/agent-skills/` | Generated Codex plugin. |
+| `adapters/codex/plugins/agent-skills/` | Generated Codex plugin. |
 | `adapters/claude/plugins/agent-skills/` | Generated Claude Code plugin. |
 | `assets/plugins/agent-skills/` | Suite artwork. |
 | `assets/retired-skills/` | Preserved artwork from retired skills. |
@@ -214,11 +218,12 @@ claude plugin validate . --strict
 
 The verification suite rebuilds every generated file in a temporary folder and compares it byte for
 byte with the committed copy. It also checks the one-suite layout, each skill's invocation setting,
-a "Use when" trigger line in every description, text files under 16 KB, host-specific
-orchestration, attribution, the absence of workflow hooks, and preserved artwork. Also validate all
-canonical and generated Codex skills with Codex's `quick_validate.py`, and the Claude plugin with
-`claude plugin validate PATH --strict`. Windows can use `python` in place of `python3`; set
-`PYTHONUTF8=1` for validators that use the platform's default text encoding.
+that only the Claude Code plugin can sit where Grok looks for it, a "Use when" trigger line in every
+description, text files under 16 KB, host-specific orchestration, attribution, the absence of
+workflow hooks, and preserved artwork. Also validate all canonical and generated Codex skills with
+Codex's `quick_validate.py`, and the Claude plugin with `claude plugin validate PATH --strict`.
+Windows can use `python` in place of `python3`; set `PYTHONUTF8=1` for validators that use the
+platform's default text encoding.
 
 ## Retired
 
