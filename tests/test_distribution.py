@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import re
@@ -8,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,10 +24,18 @@ SUITE = "agent-skills"
 MANUAL_ONLY = {"english", "orchestrate"}
 MAX_SKILL_FILE_BYTES = 16 * 1024
 MAX_DESCRIPTION_CHARS = 180
+GROK_BOT_BUNDLE = ROOT / "adapters/grok-bot" / SUITE
+FINGERPRINT = re.compile(r"fingerprint `([0-9a-f]{12})`")
 
 
 def directory_names(path: Path) -> set[str]:
     return {item.name for item in path.iterdir() if item.is_dir()}
+
+
+def split_fingerprint(bundle: Path) -> tuple[str, str]:
+    router = (bundle / "SKILL.md").read_text(encoding="utf-8")
+    match = FINGERPRINT.search(router)
+    return match.group(1), router[: match.start(1)] + router[match.end(1) :]
 
 
 def frontmatter(path: Path) -> dict[str, str]:
@@ -72,7 +82,7 @@ class DistributionTests(unittest.TestCase):
         self.assertEqual([SUITE], list(PLUGINS))
         self.assertEqual(ALL_SKILLS, directory_names(ROOT / "skills"))
         self.assertEqual(sorted(ALL_SKILLS), sorted(PLUGINS[SUITE].skills))
-        for folder in ("adapters/codex/plugins", "adapters/claude/plugins", "assets/plugins"):
+        for folder in ("adapters/codex/plugins", "adapters/claude/plugins", "adapters/grok-bot", "assets/plugins"):
             self.assertEqual({SUITE}, directory_names(ROOT / folder), folder)
 
     def test_manual_only_skills_are_deliberate(self) -> None:
@@ -210,8 +220,152 @@ class DistributionTests(unittest.TestCase):
             for path in root.rglob("*"):
                 self.assertNotIn(path.name.lower(), instruction_files, path)
 
+    def test_grok_bot_bundle_copies_canonical_skills(self) -> None:
+        bundle = ROOT / "adapters/grok-bot" / SUITE / "skills"
+        self.assertEqual(ALL_SKILLS, directory_names(bundle))
+        for name in ALL_SKILLS:
+            source = ROOT / "skills" / name
+            expected = {
+                path
+                for path in build_adapters.files_under(source)
+                if path.parts[0] not in {"assets", "variants"}
+            }
+            self.assertEqual(expected, build_adapters.files_under(bundle / name), name)
+            for path in expected:
+                original = (source / path).read_text(encoding="utf-8")
+                if path == Path("SKILL.md"):
+                    original = build_adapters.portable_frontmatter(original)
+                self.assertEqual(original, (bundle / name / path).read_text(encoding="utf-8"), path)
+            keys = set(frontmatter(bundle / name / "SKILL.md"))
+            self.assertLessEqual(keys, build_adapters.PORTABLE_FRONTMATTER, name)
+
+    def test_portable_frontmatter_drops_host_settings(self) -> None:
+        text = (
+            "---\nname: sample\ndescription: Does one thing. Use when asked.\nlicense: MIT\n"
+            "disable-model-invocation: true\nallowed-tools: Bash(git:*) Read\nmetadata:\n  owner: x\n"
+            "argument-hint: [file]\n---\n\n# Sample\n"
+        )
+        self.assertEqual(
+            "---\nname: sample\ndescription: Does one thing. Use when asked.\nlicense: MIT\n"
+            "metadata:\n  owner: x\n---\n\n# Sample\n",
+            build_adapters.portable_frontmatter(text),
+        )
+
+    def test_grok_bot_router_runs_named_skills_only(self) -> None:
+        bundle = ROOT / "adapters/grok-bot" / SUITE
+        router = (bundle / "SKILL.md").read_text(encoding="utf-8")
+        fields = frontmatter(bundle / "SKILL.md")
+        self.assertEqual({"name", "description"}, set(fields))
+        self.assertEqual(SUITE, fields["name"])
+        self.assertLessEqual(len(fields["description"]), 1024)
+        self.assertNotRegex(fields["description"], "[<>]")
+        self.assertEqual([], build_adapters.frontmatter_problems(router))
+        body = router.split("---", 2)[2]
+        self.assertIn("Manual only. Run a sub-skill only when the user names it.", body)
+        self.assertIn(f"list the {len(ALL_SKILLS)} sub-skills below", body)
+        for name in PLUGINS[SUITE].skills:
+            self.assertIn(name, fields["description"])
+            description = frontmatter(ROOT / "skills" / name / "SKILL.md")["description"]
+            self.assertIn(f"- `{name}`: {description}\n", body)
+        for rule in (
+            "background workers or cloud agents",
+            "the models Grok Bot offers",
+            "Never choose Fast unless the user asks",
+            "run that sub-skill from this bundle",
+            "a cloud agent on the connected repository",
+            "Never commit, push, merge, or publish without the user's explicit approval",
+            "answer from the conversation only",
+        ):
+            self.assertIn(rule, body)
+        # The translation quotes these lines; if one changes, update GROK_BOT_TRANSLATION too.
+        for path, phrase in {
+            "skills/orchestrate/SKILL.md": "the models and effort levels the current Codex session exposes",
+            "skills/codebase-design/DESIGN-IT-TWICE.md": "Spawn 3+ sub-agents",
+            "skills/conceptual-review/SKILL.md": "`$codebase-design`",
+            "skills/english/SKILL.md": "Do not use tools",
+        }.items():
+            self.assertIn(phrase, (ROOT / path).read_text(encoding="utf-8"), path)
+        fingerprint, unsigned = split_fingerprint(bundle)
+        self.assertEqual(fingerprint, build_adapters.bundle_fingerprint(bundle, unsigned))
+        self.assertEqual(
+            f"Source: {build_adapters.REPOSITORY}, version {PLUGINS[SUITE].version}, "
+            f"fingerprint `{fingerprint}`. License: {PLUGINS[SUITE].license}; see LICENSE, NOTICE.md, "
+            "and ORIGIN.md next to this file.",
+            router.rstrip("\n").rsplit("\n", 1)[1],
+        )
+        for path in bundle.rglob("*"):
+            if path.is_file():
+                self.assertNotRegex(path.read_text(encoding="utf-8"), r"[A-Za-z]:\\|/home/|/Users/", path)
+
+    def test_grok_bot_bundle_carries_license_and_attribution(self) -> None:
+        for notice in ("LICENSE", "NOTICE.md", "ORIGIN.md"):
+            self.assertEqual((ROOT / notice).read_bytes(), (GROK_BOT_BUNDLE / notice).read_bytes(), notice)
+        license_text = (GROK_BOT_BUNDLE / "LICENSE").read_text(encoding="utf-8")
+        self.assertIn("Copyright (c) 2026 Matt Pocock", license_text)
+        self.assertIn("Permission is hereby granted", license_text)
+        apache = (GROK_BOT_BUNDLE / "skills/frontend-design/LICENSE.txt").read_text(encoding="utf-8")
+        self.assertIn("Apache License", apache)
+        links = re.findall(r"\]\(([^):#]+)\)", (GROK_BOT_BUNDLE / "NOTICE.md").read_text(encoding="utf-8"))
+        self.assertEqual(["LICENSE", "skills/frontend-design/LICENSE.txt"], links)
+        for link in links:
+            self.assertTrue((GROK_BOT_BUNDLE / link).is_file(), link)
+
+    def test_bundle_fingerprint_covers_every_bundled_byte(self) -> None:
+        plugin = PLUGINS[SUITE]
+        variants = (
+            (plugin, build_adapters.REPOSITORY),
+            (dataclasses.replace(plugin, version="9.9.9"), build_adapters.REPOSITORY),
+            (dataclasses.replace(plugin, license="MIT"), build_adapters.REPOSITORY),
+            (plugin, "https://example.invalid/agent-skills"),
+        )
+        fingerprints = []
+        with tempfile.TemporaryDirectory() as temp:
+            for index, (variant, repository) in enumerate(variants):
+                bundle = Path(temp) / str(index) / SUITE
+                with mock.patch.object(build_adapters, "REPOSITORY", repository):
+                    build_adapters.build_grok_bot_bundle(bundle, SUITE, variant)
+                fingerprint, unsigned = split_fingerprint(bundle)
+                self.assertEqual(fingerprint, build_adapters.bundle_fingerprint(bundle, unsigned))
+                fingerprints.append(fingerprint)
+            first = Path(temp) / "0" / SUITE
+            _, unsigned = split_fingerprint(first)
+            with (first / "NOTICE.md").open("a", encoding="utf-8", newline="\n") as handle:
+                handle.write("Edited.\n")
+            fingerprints.append(build_adapters.bundle_fingerprint(first, unsigned))
+        self.assertEqual(len(fingerprints), len(set(fingerprints)), fingerprints)
+
+    def test_bundle_fingerprint_ignores_checkout_line_endings(self) -> None:
+        fingerprints = []
+        with tempfile.TemporaryDirectory() as temp:
+            for label, content in (("lf", b"Terms\nApply\n"), ("crlf", b"Terms\r\nApply\r\n"), ("edit", b"Terms\nChanged\n")):
+                bundle = Path(temp) / label
+                (bundle / "skills" / "sample").mkdir(parents=True)
+                (bundle / "skills" / "sample" / "LICENSE.txt").write_bytes(content)
+                fingerprints.append(build_adapters.bundle_fingerprint(bundle, "router\n"))
+        self.assertEqual(fingerprints[0], fingerprints[1])
+        self.assertNotEqual(fingerprints[0], fingerprints[2])
+
+    def test_drift_check_flags_a_stale_grok_bot_bundle(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "skills"
+            shutil.copytree(ROOT / "skills", source)
+            english = source / "english" / "SKILL.md"
+            text = english.read_text(encoding="utf-8").replace("Explain only.", "Explain first.")
+            english.write_text(text, encoding="utf-8", newline="\n")
+            with mock.patch.object(build_adapters, "SOURCE", source):
+                expected = build_adapters.build_expected(Path(temp) / "build")
+            grok_bot = next(path for path, target in expected.items() if target == build_adapters.GROK_BOT)
+            problems = build_adapters.compare(grok_bot, build_adapters.GROK_BOT)
+        self.assertEqual(
+            {
+                f"changed: adapters/grok-bot/{SUITE}/SKILL.md",
+                f"changed: adapters/grok-bot/{SUITE}/skills/english/SKILL.md",
+            },
+            set(problems),
+        )
+
     def test_retired_hosts_are_absent_from_active_distribution(self) -> None:
-        self.assertEqual({"claude", "codex"}, directory_names(ROOT / "adapters"))
+        self.assertEqual({"claude", "codex", "grok-bot"}, directory_names(ROOT / "adapters"))
         self.assertFalse((ROOT / ".cursor-plugin").exists())
         self.assertFalse((ROOT / "marketplace.json").exists())
 

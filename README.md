@@ -4,9 +4,9 @@
 
 # Agent Skills
 
-**One suite. Nine focused skills. Codex and Claude Code.**
+**One suite. Nine focused skills. Codex, Claude Code, and Grok Bot.**
 
-`Codex` · `Claude Code` · Windows and macOS
+`Codex` · `Claude Code` · `Grok Bot` · Windows and macOS
 
 </div>
 
@@ -15,7 +15,7 @@
 Agent Skills is Statusnone's versioned skill suite for codebase design, debugging, reviews,
 documentation, plain-English answers, frontend design, and subagent coordination. It ships as one
 plugin, `agent-skills`, from the `statusnone-agent-skills` marketplace. Every skill is a peer inside
-that plugin; there are no sub-plugins.
+that plugin; there are no sub-plugins. For Grok Bot, the same nine skills ship as one router skill.
 
 ## The skills
 
@@ -42,6 +42,7 @@ it fired by itself.
 |---|---|---|
 | **Claude Code** | `/agent-skills:english`, or `/english` when no other command uses that name | `disable-model-invocation: true` |
 | **Codex** | `$agent-skills:english`. Plain `$english` does not find a plugin skill. | `allow_implicit_invocation: false` |
+| **Grok Bot** | Name it in your message, such as "use agent-skills english" | The router runs every skill only when you name it |
 
 The catalog in `tools/build_adapters.py` sets each skill's mode, and tests check that the generated
 Codex and Claude Code settings match it. Delegation never expands the user's authorization,
@@ -56,7 +57,8 @@ substituting. The Claude Code variant contains no Codex model names or custom ag
 
 **Checked** means we ran it here on Windows with the host version named, or this repository's own
 checks, a host's CLI help, or a host's validator confirmed it. Each label says which. **Docs** means
-it comes from the host's documentation but was not run end to end here.
+it comes from the host's documentation but was not run end to end here. **Reported** means the
+host's own agent described it, but it was not run end to end here.
 **Unverified** means it is our best reading and still needs a real test.
 
 ### Claude Code (terminal, IDE, and the Code tab in Claude Desktop)
@@ -129,14 +131,21 @@ no `disable-model-invocation` line, so `english` and `orchestrate` could load on
 `grok inspect` lists the skills under `marketplaces/statusnone-agent-skills/plugins/agent-skills/`,
 refresh that copy with `claude plugin marketplace update statusnone-agent-skills`.
 
-### Cursor and Cursor Grok Bots
+### Cursor and Grok Bot
 
 - **Cursor agents**, including Grok models in Cursor: copy the folders in
   `adapters/claude/plugins/agent-skills/skills/` to `~/.cursor/skills/` for every project, or to
   `.cursor/skills/` for one. Use these copies because Cursor honors their
   `disable-model-invocation` line. **Docs.**
-- **Cursor Grok Bots** (the separate Grok Bot app): Cursor documents no skill-folder or plugin
-  import. Paste a skill's `SKILL.md` into the Bot and ask it to save it as a skill. **Unverified.**
+- **Grok Bot** (xAI's agent app, included with paid Cursor plans): copy
+  `adapters/grok-bot/agent-skills/` into Grok Bot's skills folder, so that the folder holds
+  `agent-skills/SKILL.md` and `agent-skills/skills/`. The folder also carries `LICENSE`,
+  `NOTICE.md`, and `ORIGIN.md`, so the copy keeps its license and attribution. That one router skill
+  holds all nine skills and runs each only when you name it, such as "use agent-skills english". It also tells Grok Bot how to
+  read Codex and Claude Code terms such as subagents and `$codebase-design`. To update, replace the
+  folder with a fresh copy; the last line of its `SKILL.md` gives the version and a fingerprint that
+  changes whenever the bundle changes. **Reported** by Grok Bot; xAI's Grok Bot docs do not describe
+  the folder. **Unverified:** a full run of the bundle in Grok Bot.
 
 ## Upgrading from the four plugins
 
@@ -179,15 +188,16 @@ flowchart LR
     S["Canonical skills<br/>skills/"] --> B["Catalog and builder<br/>tools/build_adapters.py"]
     B --> C["Codex plugin<br/>adapters/codex/plugins/agent-skills/"]
     B --> A["Claude Code plugin<br/>adapters/claude/plugins/agent-skills/"]
+    B --> G["Grok Bot router skill<br/>adapters/grok-bot/agent-skills/"]
     B --> M["Marketplaces<br/>.agents/plugins/ · .claude-plugin/"]
 ```
 
 `skills/` is the only canonical workflow source. Suite metadata and each skill's invocation mode
-live in one catalog at the top of `tools/build_adapters.py`. Host copies, plugin manifests, and both
-marketplace files are generated and must never be edited by hand. Mac uses the same packages and
-needs no separate adapter. The Codex plugin stays out of a top-level `plugins/` folder: Grok Build
-loads that folder from Claude Code's copy of this repository and ignores the marketplace `source`. A
-test enforces this.
+live in one catalog at the top of `tools/build_adapters.py`. Host copies, the Grok Bot router, plugin
+manifests, and both marketplace files are generated and must never be edited by hand. Mac uses the
+same packages and needs no separate adapter. The Codex plugin and the Grok Bot bundle stay out of a
+top-level `plugins/` folder: Grok Build loads that folder from Claude Code's copy of this repository
+and ignores the marketplace `source`. A test enforces this.
 
 ## Repository map
 
@@ -197,6 +207,7 @@ test enforces this.
 | `tools/build_adapters.py` | Suite catalog and the builder for every generated file. |
 | `adapters/codex/plugins/agent-skills/` | Generated Codex plugin. |
 | `adapters/claude/plugins/agent-skills/` | Generated Claude Code plugin. |
+| `adapters/grok-bot/agent-skills/` | Generated Grok Bot router skill, its copies of the nine skills, and the license files. |
 | `assets/plugins/agent-skills/` | Suite artwork. |
 | `assets/retired-skills/` | Preserved artwork from retired skills. |
 | `assets/retired-plugins/` | Preserved artwork from the four retired plugins. |
@@ -220,8 +231,11 @@ The verification suite rebuilds every generated file in a temporary folder and c
 byte with the committed copy. It also checks the one-suite layout, each skill's invocation setting,
 that only the Claude Code plugin can sit where Grok looks for it, a "Use when" trigger line in every
 description, text files under 16 KB, host-specific orchestration, attribution, the absence of
-workflow hooks, and preserved artwork. Also validate all canonical and generated Codex skills with
-Codex's `quick_validate.py`, and the Claude plugin with `claude plugin validate PATH --strict`.
+workflow hooks, and preserved artwork. It checks that the Grok Bot bundle copies `skills/` exactly,
+minus artwork, host variants, and host-only frontmatter, carries the license and attribution files,
+and has a fingerprint that covers every bundled byte. Also validate all canonical and generated
+Codex and Grok Bot skills with Codex's `quick_validate.py`, and the Claude plugin with
+`claude plugin validate PATH --strict`.
 Windows can use `python` in place of `python3`; set `PYTHONUTF8=1` for validators that use the
 platform's default text encoding.
 
@@ -235,7 +249,7 @@ platform's default text encoding.
   Design, replaced by `agent-skills`. The Engineering Workflows icon became the suite icon; the other
   three are in `assets/retired-plugins/`.
 - **Hosts, September 2026:** the Cursor/Grok Bot and ZCode adapters. Their artwork is in
-  `assets/retired-hosts/`.
+  `assets/retired-hosts/`. Grok Bot came back in October 2026 as the generated router skill.
 
 ## Releases and installed copies
 
@@ -250,5 +264,6 @@ establish runtime acceptance on the other.
 
 See [ORIGIN.md](ORIGIN.md), [NOTICE.md](NOTICE.md), and [LICENSE](LICENSE). Most of this repository is
 MIT licensed. `skills/frontend-design/` is an Apache-2.0 adaptation and keeps its own `LICENSE.txt`,
-so the plugin manifests declare `MIT AND Apache-2.0`. Third-party inspirations and adaptations are
-attributed without implying endorsement.
+so the plugin manifests declare `MIT AND Apache-2.0`. The Grok Bot bundle is copied out of the
+repository on its own, so it carries copies of `LICENSE`, `NOTICE.md`, and `ORIGIN.md`. Third-party
+inspirations and adaptations are attributed without implying endorsement.
