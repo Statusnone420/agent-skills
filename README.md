@@ -139,8 +139,9 @@ refresh that copy with `claude plugin marketplace update statusnone-agent-skills
   `disable-model-invocation` line. **Docs.**
 - **Grok Bot** (xAI's agent app, included with paid Cursor plans): copy
   `adapters/grok-bot/agent-skills/` into Grok Bot's skills folder, so that the folder holds
-  `agent-skills/SKILL.md` and `agent-skills/skills/`. That one router skill holds all nine skills and
-  runs each only when you name it, such as "use agent-skills english". It also tells Grok Bot how to
+  `agent-skills/SKILL.md` and `agent-skills/skills/`. The folder also carries `LICENSE`,
+  `NOTICE.md`, and `ORIGIN.md`, so the copy keeps its license and attribution. That one router skill
+  holds all nine skills and runs each only when you name it, such as "use agent-skills english". It also tells Grok Bot how to
   read Codex and Claude Code terms such as subagents and `$codebase-design`. To update, replace the
   folder with a fresh copy; the last line of its `SKILL.md` gives the version and a fingerprint that
   changes whenever the bundle changes. **Reported** by Grok Bot; xAI's Grok Bot docs do not describe
@@ -206,7 +207,7 @@ and ignores the marketplace `source`. A test enforces this.
 | `tools/build_adapters.py` | Suite catalog and the builder for every generated file. |
 | `adapters/codex/plugins/agent-skills/` | Generated Codex plugin. |
 | `adapters/claude/plugins/agent-skills/` | Generated Claude Code plugin. |
-| `adapters/grok-bot/agent-skills/` | Generated Grok Bot router skill and its copies of the nine skills. |
+| `adapters/grok-bot/agent-skills/` | Generated Grok Bot router skill, its copies of the nine skills, and the license files. |
 | `assets/plugins/agent-skills/` | Suite artwork. |
 | `assets/retired-skills/` | Preserved artwork from retired skills. |
 | `assets/retired-plugins/` | Preserved artwork from the four retired plugins. |
@@ -231,7 +232,8 @@ byte with the committed copy. It also checks the one-suite layout, each skill's 
 that only the Claude Code plugin can sit where Grok looks for it, a "Use when" trigger line in every
 description, text files under 16 KB, host-specific orchestration, attribution, the absence of
 workflow hooks, and preserved artwork. It checks that the Grok Bot bundle copies `skills/` exactly,
-minus artwork, host variants, and host-only frontmatter. Also validate all canonical and generated
+minus artwork, host variants, and host-only frontmatter, carries the license and attribution files,
+and has a fingerprint that covers every bundled byte. Also validate all canonical and generated
 Codex and Grok Bot skills with Codex's `quick_validate.py`, and the Claude plugin with
 `claude plugin validate PATH --strict`.
 Windows can use `python` in place of `python3`; set `PYTHONUTF8=1` for validators that use the
@@ -262,5 +264,6 @@ establish runtime acceptance on the other.
 
 See [ORIGIN.md](ORIGIN.md), [NOTICE.md](NOTICE.md), and [LICENSE](LICENSE). Most of this repository is
 MIT licensed. `skills/frontend-design/` is an Apache-2.0 adaptation and keeps its own `LICENSE.txt`,
-so the plugin manifests declare `MIT AND Apache-2.0`. Third-party inspirations and adaptations are
-attributed without implying endorsement.
+so the plugin manifests declare `MIT AND Apache-2.0`. The Grok Bot bundle is copied out of the
+repository on its own, so it carries copies of `LICENSE`, `NOTICE.md`, and `ORIGIN.md`. Third-party
+inspirations and adaptations are attributed without implying endorsement.

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import dataclasses
 import hashlib
 import json
 import re
@@ -23,10 +24,18 @@ SUITE = "agent-skills"
 MANUAL_ONLY = {"english", "orchestrate"}
 MAX_SKILL_FILE_BYTES = 16 * 1024
 MAX_DESCRIPTION_CHARS = 180
+GROK_BOT_BUNDLE = ROOT / "adapters/grok-bot" / SUITE
+FINGERPRINT = re.compile(r"fingerprint `([0-9a-f]{12})`")
 
 
 def directory_names(path: Path) -> set[str]:
     return {item.name for item in path.iterdir() if item.is_dir()}
+
+
+def split_fingerprint(bundle: Path) -> tuple[str, str]:
+    router = (bundle / "SKILL.md").read_text(encoding="utf-8")
+    match = FINGERPRINT.search(router)
+    return match.group(1), router[: match.start(1)] + router[match.end(1) :]
 
 
 def frontmatter(path: Path) -> dict[str, str]:
@@ -276,25 +285,63 @@ class DistributionTests(unittest.TestCase):
             "skills/english/SKILL.md": "Do not use tools",
         }.items():
             self.assertIn(phrase, (ROOT / path).read_text(encoding="utf-8"), path)
-        start = router.rindex("\nSource: ") + 1
-        fingerprint = build_adapters.bundle_fingerprint(bundle / "skills", router[:start])
+        fingerprint, unsigned = split_fingerprint(bundle)
+        self.assertEqual(fingerprint, build_adapters.bundle_fingerprint(bundle, unsigned))
         self.assertEqual(
             f"Source: {build_adapters.REPOSITORY}, version {PLUGINS[SUITE].version}, "
-            f"fingerprint `{fingerprint}`.",
-            router[start:].split(" License: ")[0],
+            f"fingerprint `{fingerprint}`. License: {PLUGINS[SUITE].license}; see LICENSE, NOTICE.md, "
+            "and ORIGIN.md next to this file.",
+            router.rstrip("\n").rsplit("\n", 1)[1],
         )
         for path in bundle.rglob("*"):
             if path.is_file():
                 self.assertNotRegex(path.read_text(encoding="utf-8"), r"[A-Za-z]:\\|/home/|/Users/", path)
 
+    def test_grok_bot_bundle_carries_license_and_attribution(self) -> None:
+        for notice in ("LICENSE", "NOTICE.md", "ORIGIN.md"):
+            self.assertEqual((ROOT / notice).read_bytes(), (GROK_BOT_BUNDLE / notice).read_bytes(), notice)
+        license_text = (GROK_BOT_BUNDLE / "LICENSE").read_text(encoding="utf-8")
+        self.assertIn("Copyright (c) 2026 Matt Pocock", license_text)
+        self.assertIn("Permission is hereby granted", license_text)
+        apache = (GROK_BOT_BUNDLE / "skills/frontend-design/LICENSE.txt").read_text(encoding="utf-8")
+        self.assertIn("Apache License", apache)
+        links = re.findall(r"\]\(([^):#]+)\)", (GROK_BOT_BUNDLE / "NOTICE.md").read_text(encoding="utf-8"))
+        self.assertEqual(["LICENSE", "skills/frontend-design/LICENSE.txt"], links)
+        for link in links:
+            self.assertTrue((GROK_BOT_BUNDLE / link).is_file(), link)
+
+    def test_bundle_fingerprint_covers_every_bundled_byte(self) -> None:
+        plugin = PLUGINS[SUITE]
+        variants = (
+            (plugin, build_adapters.REPOSITORY),
+            (dataclasses.replace(plugin, version="9.9.9"), build_adapters.REPOSITORY),
+            (dataclasses.replace(plugin, license="MIT"), build_adapters.REPOSITORY),
+            (plugin, "https://example.invalid/agent-skills"),
+        )
+        fingerprints = []
+        with tempfile.TemporaryDirectory() as temp:
+            for index, (variant, repository) in enumerate(variants):
+                bundle = Path(temp) / str(index) / SUITE
+                with mock.patch.object(build_adapters, "REPOSITORY", repository):
+                    build_adapters.build_grok_bot_bundle(bundle, SUITE, variant)
+                fingerprint, unsigned = split_fingerprint(bundle)
+                self.assertEqual(fingerprint, build_adapters.bundle_fingerprint(bundle, unsigned))
+                fingerprints.append(fingerprint)
+            first = Path(temp) / "0" / SUITE
+            _, unsigned = split_fingerprint(first)
+            with (first / "NOTICE.md").open("a", encoding="utf-8", newline="\n") as handle:
+                handle.write("Edited.\n")
+            fingerprints.append(build_adapters.bundle_fingerprint(first, unsigned))
+        self.assertEqual(len(fingerprints), len(set(fingerprints)), fingerprints)
+
     def test_bundle_fingerprint_ignores_checkout_line_endings(self) -> None:
         fingerprints = []
         with tempfile.TemporaryDirectory() as temp:
             for label, content in (("lf", b"Terms\nApply\n"), ("crlf", b"Terms\r\nApply\r\n"), ("edit", b"Terms\nChanged\n")):
-                skills = Path(temp) / label / "skills"
-                (skills / "sample").mkdir(parents=True)
-                (skills / "sample" / "LICENSE.txt").write_bytes(content)
-                fingerprints.append(build_adapters.bundle_fingerprint(skills, "router\n"))
+                bundle = Path(temp) / label
+                (bundle / "skills" / "sample").mkdir(parents=True)
+                (bundle / "skills" / "sample" / "LICENSE.txt").write_bytes(content)
+                fingerprints.append(build_adapters.bundle_fingerprint(bundle, "router\n"))
         self.assertEqual(fingerprints[0], fingerprints[1])
         self.assertNotEqual(fingerprints[0], fingerprints[2])
 

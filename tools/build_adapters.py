@@ -33,6 +33,8 @@ YAML_RESERVED_STARTS = tuple("[{&*!|>%@`#")
 # https://agentskills.io/specification
 PORTABLE_FRONTMATTER = frozenset({"name", "description", "license", "compatibility", "metadata"})
 GROK_BOT_LEFT_OUT = frozenset({"assets", "variants"})
+# The bundle is copied out of the repository on its own, so it carries its license and attribution.
+GROK_BOT_NOTICES = ("LICENSE", "NOTICE.md", "ORIGIN.md")
 GROK_BOT_TRANSLATION = (
     "- **Subagents and sub-agents** (`orchestrate` and `skills/codebase-design/DESIGN-IT-TWICE.md`): "
     "use Grok Bot background workers or cloud agents, with the same rules. Give each one concrete "
@@ -291,17 +293,17 @@ def copy_portable_skills(names: tuple[str, ...], destination: Path) -> None:
         write_text_lf(skill_md, portable_frontmatter(skill_md.read_text(encoding="utf-8")))
 
 
-def bundle_fingerprint(skills: Path, router: str) -> str:
-    digest = hashlib.sha256(router.encode("utf-8"))
-    for path in sorted(files_under(skills), key=Path.as_posix):
+def bundle_fingerprint(bundle: Path, unsigned_router: str) -> str:
+    digest = hashlib.sha256(unsigned_router.encode("utf-8"))
+    for path in sorted(files_under(bundle) - {Path("SKILL.md")}, key=Path.as_posix):
         # Git can check text out with CRLF on Windows; hash the LF form it commits.
-        data = (skills / path).read_bytes().replace(b"\r\n", b"\n")
+        data = (bundle / path).read_bytes().replace(b"\r\n", b"\n")
         digest.update(f"\0{path.as_posix()}\0{len(data)}\0".encode("utf-8"))
         digest.update(data)
     return digest.hexdigest()[:12]
 
 
-def grok_bot_router(name: str, plugin: PluginDefinition, skills: Path) -> str:
+def grok_bot_router(name: str, plugin: PluginDefinition, skills: Path, fingerprint: str = "") -> str:
     entries = [
         f"- `{skill}`: "
         + frontmatter_value((skills / skill / "SKILL.md").read_text(encoding="utf-8"), "description")
@@ -332,6 +334,9 @@ def grok_bot_router(name: str, plugin: PluginDefinition, skills: Path) -> str:
         "",
         *GROK_BOT_TRANSLATION,
         "",
+        f"Source: {REPOSITORY}, version {plugin.version}, fingerprint `{fingerprint}`. License: "
+        f"{plugin.license}; see {', '.join(GROK_BOT_NOTICES[:-1])}, and {GROK_BOT_NOTICES[-1]} next "
+        "to this file.",
     ]
     return "\n".join(lines) + "\n"
 
@@ -339,13 +344,11 @@ def grok_bot_router(name: str, plugin: PluginDefinition, skills: Path) -> str:
 def build_grok_bot_bundle(destination: Path, name: str, plugin: PluginDefinition) -> None:
     skills = destination / "skills"
     copy_portable_skills(plugin.skills, skills)
-    router = grok_bot_router(name, plugin, skills)
-    source = (
-        f"Source: {REPOSITORY}, version {plugin.version}, fingerprint "
-        f"`{bundle_fingerprint(skills, router)}`. License: {plugin.license}; see LICENSE, NOTICE.md, "
-        "and ORIGIN.md in the repository.\n"
-    )
-    write_text_lf(destination / "SKILL.md", router + source)
+    for notice in GROK_BOT_NOTICES:
+        shutil.copyfile(ROOT / notice, destination / notice)
+    # The fingerprint covers every byte of the bundle except its own value.
+    fingerprint = bundle_fingerprint(destination, grok_bot_router(name, plugin, skills))
+    write_text_lf(destination / "SKILL.md", grok_bot_router(name, plugin, skills, fingerprint))
 
 
 def repository_path(path: Path) -> str:
