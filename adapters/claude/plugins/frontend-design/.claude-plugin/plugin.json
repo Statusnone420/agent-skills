@@ -1,7 +1,7 @@
 {
   "name": "frontend-design",
   "version": "0.1.1",
-  "description": "Manual-only guidance for distinctive, intentional interface design.",
+  "description": "Statusnone-maintained guidance for distinctive, intentional interface design.",
   "author": {
     "name": "Statusnone"
   },
@@ -12,6 +12,7 @@
     "frontend",
     "design",
     "ui",
+    "ux",
     "visual-direction"
   ]
 }

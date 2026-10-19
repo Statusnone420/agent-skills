@@ -3,75 +3,87 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shutil
+import sys
+import tempfile
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PLUGIN_SKILLS = {
-    "engineering-workflows": {
-        "grill-me",
-        "domain-modeling",
-        "diagnosing-bugs",
-        "comment-discipline",
-        "tdd",
-        "codebase-design",
-        "conceptual-review",
-        "contract-review",
-        "repository-docs",
-        "maintaining-docs",
-    },
-    "communication-tools": {
-        "english",
-        "concise",
-    },
-    "agent-control": {"orchestrate", "superpowers"},
-    "frontend-design": {"frontend-design"},
-}
-CLAUDE_SKILLS = {
-    "engineering-workflows": PLUGIN_SKILLS["engineering-workflows"],
-    "communication-tools": {"english", "concise"},
-    "agent-control": {"orchestrate", "superpowers"},
-    "frontend-design": {"frontend-design"},
-}
-ALL_SKILLS = set().union(*PLUGIN_SKILLS.values())
+sys.path.insert(0, str(ROOT / "tools"))
+
+import build_adapters
+
+ALL_SKILLS = set(build_adapters.SKILLS)
+PLUGINS = build_adapters.PLUGINS
+MAX_SKILL_FILE_BYTES = 16 * 1024
 
 
 def directory_names(path: Path) -> set[str]:
     return {item.name for item in path.iterdir() if item.is_dir()}
 
 
+def frontmatter(path: Path) -> dict[str, str]:
+    block = path.read_text(encoding="utf-8").split("---", 2)[1]
+    fields = (line.split(":", 1) for line in block.splitlines() if ":" in line)
+    return {key.strip(): value.strip().strip('"') for key, value in fields}
+
+
 class DistributionTests(unittest.TestCase):
+    def test_generated_files_match_catalog_and_canonical_skills(self) -> None:
+        build_adapters.validate_configuration()
+        self.assertEqual([], build_adapters.find_drift())
+
+    def test_drift_check_compares_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            expected = Path(temp) / "expected"
+            actual = Path(temp) / "actual"
+            for root in (expected, actual):
+                (root / "skill").mkdir(parents=True)
+            (expected / "skill" / "SKILL.md").write_bytes(b"same size\n")
+            (actual / "skill" / "SKILL.md").write_bytes(b"same SIZE\n")
+            shutil.copystat(expected / "skill" / "SKILL.md", actual / "skill" / "SKILL.md")
+            (expected / "skill" / "notes.md").write_bytes(b"kept\n")
+            (actual / "skill" / "stale.md").write_bytes(b"left over\n")
+            (expected / "marketplace.json").write_bytes(b"{}\n")
+            (actual / "marketplace.json").write_bytes(b"[]\n")
+            shutil.copystat(expected / "marketplace.json", actual / "marketplace.json")
+
+            tree = build_adapters.compare(expected / "skill", actual / "skill")
+            single = build_adapters.compare(expected / "marketplace.json", actual / "marketplace.json")
+
+        kinds = sorted(problem.split(":")[0] + " " + problem.rsplit("/", 1)[-1] for problem in tree)
+        self.assertEqual(["changed SKILL.md", "missing notes.md", "unexpected stale.md"], kinds)
+        self.assertEqual(1, len(single))
+        self.assertTrue(single[0].startswith("changed: "), single)
+
+    def test_skill_files_stay_under_16_kb(self) -> None:
+        for root in (ROOT / "skills", ROOT / "plugins", ROOT / "adapters"):
+            for path in root.rglob("*"):
+                if path.is_file() and path.suffix != ".png":
+                    self.assertLess(path.stat().st_size, MAX_SKILL_FILE_BYTES, path)
+
     def test_canonical_skill_set_is_exact(self) -> None:
         self.assertEqual(ALL_SKILLS, directory_names(ROOT / "skills"))
-        total_memberships = sum(len(names) for names in PLUGIN_SKILLS.values())
-        self.assertEqual(len(ALL_SKILLS), total_memberships)
-
-    def test_exact_skill_set_in_every_plugin(self) -> None:
-        for plugin, names in PLUGIN_SKILLS.items():
-            self.assertEqual(names, directory_names(ROOT / "plugins" / plugin / "skills"))
-        for plugin, names in CLAUDE_SKILLS.items():
-            self.assertEqual(
-                names,
-                directory_names(ROOT / "adapters" / "claude" / "plugins" / plugin / "skills"),
-            )
+        memberships = [name for plugin in PLUGINS.values() for name in plugin.skills]
+        self.assertEqual(sorted(ALL_SKILLS), sorted(memberships))
 
     def test_codex_is_explicit_only(self) -> None:
-        for plugin, names in PLUGIN_SKILLS.items():
+        for plugin, definition in PLUGINS.items():
             root = ROOT / "plugins" / plugin / "skills"
-            for name in names:
+            for name in definition.skills:
                 metadata = (root / name / "agents" / "openai.yaml").read_text(encoding="utf-8")
                 self.assertIn("allow_implicit_invocation: false", metadata, name)
                 self.assertIn('icon_small: "./assets/icon.png"', metadata, name)
                 self.assertIn('icon_large: "./assets/icon.png"', metadata, name)
 
     def test_claude_is_explicit_only(self) -> None:
-        for plugin, names in CLAUDE_SKILLS.items():
+        for plugin, definition in PLUGINS.items():
             root = ROOT / "adapters" / "claude" / "plugins" / plugin / "skills"
-            for name in names:
+            for name in definition.skills:
                 skill = (root / name / "SKILL.md").read_text(encoding="utf-8")
-                frontmatter = skill.split("---", 2)[1]
-                self.assertIn("disable-model-invocation: true", frontmatter, name)
+                self.assertIn("disable-model-invocation: true", skill.split("---", 2)[1], name)
 
     def test_every_canonical_skill_has_a_unique_icon(self) -> None:
         digests = {
@@ -95,42 +107,25 @@ class DistributionTests(unittest.TestCase):
             {path.name for path in artwork.glob("*.png")},
         )
 
-    def test_plugin_branding_is_packaged(self) -> None:
-        for plugin in PLUGIN_SKILLS:
-            canonical = (ROOT / "assets" / "plugins" / plugin / "plugin-icon.png").read_bytes()
-            for path in [
-                ROOT / "plugins" / plugin / "assets" / "plugin-icon.png",
-                ROOT / "adapters" / "claude" / "plugins" / plugin / "assets" / "plugin-icon.png",
-            ]:
-                self.assertEqual(canonical, path.read_bytes(), path)
-
-    def test_marketplaces_and_manifests_agree(self) -> None:
+    def test_marketplace_entries_resolve_to_matching_manifests(self) -> None:
         codex_marketplace = json.loads((ROOT / ".agents/plugins/marketplace.json").read_text(encoding="utf-8"))
         claude_marketplace = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
-        for marketplace in (codex_marketplace, claude_marketplace):
-            names = [entry["name"] for entry in marketplace["plugins"]]
-            self.assertEqual(set(PLUGIN_SKILLS), set(names))
-            self.assertEqual(len(PLUGIN_SKILLS), len(names))
-        for plugin in PLUGIN_SKILLS:
-            codex = json.loads((ROOT / "plugins" / plugin / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
-            claude = json.loads((ROOT / "adapters/claude/plugins" / plugin / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
-            codex_entry = next(e for e in codex_marketplace["plugins"] if e["name"] == plugin)
-            claude_entry = next(e for e in claude_marketplace["plugins"] if e["name"] == plugin)
-            self.assertEqual({"source": "local", "path": f"./plugins/{plugin}"}, codex_entry["source"])
-            self.assertEqual(f"./adapters/claude/plugins/{plugin}", claude_entry["source"])
-            self.assertEqual(plugin, codex["name"])
-            self.assertEqual(codex["name"], claude["name"])
-            self.assertEqual(codex["version"], claude["version"])
-            self.assertEqual(codex["version"], claude_entry["version"])
-            self.assertRegex(codex["version"], r"^\d+\.\d+\.\d+$")
-            self.assertEqual(codex["license"], claude["license"])
+        self.assertEqual(list(PLUGINS), [entry["name"] for entry in codex_marketplace["plugins"]])
+        self.assertEqual(list(PLUGINS), [entry["name"] for entry in claude_marketplace["plugins"]])
+        for entry in codex_marketplace["plugins"]:
+            plugin_root = ROOT / entry["source"]["path"]
+            manifest = json.loads((plugin_root / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
+            self.assertEqual(entry["name"], manifest["name"])
+            self.assertRegex(manifest["version"], r"^\d+\.\d+\.\d+$")
+            self.assertTrue((plugin_root / manifest["skills"]).is_dir(), entry["name"])
             for field in ("composerIcon", "logo", "logoDark"):
-                self.assertEqual("./assets/plugin-icon.png", codex["interface"][field])
-
-    def test_cross_host_boundaries_are_deliberate(self) -> None:
-        self.assertEqual({"english", "concise"}, CLAUDE_SKILLS["communication-tools"])
-        self.assertEqual({"orchestrate", "superpowers"}, CLAUDE_SKILLS["agent-control"])
-        self.assertEqual(PLUGIN_SKILLS, CLAUDE_SKILLS)
+                self.assertTrue((plugin_root / manifest["interface"][field]).is_file(), field)
+        for entry in claude_marketplace["plugins"]:
+            plugin_root = ROOT / entry["source"]
+            manifest = json.loads((plugin_root / ".claude-plugin/plugin.json").read_text(encoding="utf-8"))
+            self.assertEqual(entry["name"], manifest["name"])
+            self.assertEqual(entry["version"], manifest["version"])
+            self.assertTrue((plugin_root / "skills").is_dir(), entry["name"])
 
     def test_consolidated_skills_keep_specialist_routes(self) -> None:
         grill_me = (ROOT / "skills" / "grill-me" / "SKILL.md").read_text(encoding="utf-8")
@@ -187,16 +182,11 @@ class DistributionTests(unittest.TestCase):
         self.assertIn("Treat comment-shaped directives as executable code", skill)
         self.assertIn("Never measure success by deletion count", skill)
 
-    def test_frontmatter_descriptions_are_compact(self) -> None:
+    def test_frontmatter_names_match_folders_and_descriptions_are_compact(self) -> None:
         for name in ALL_SKILLS:
-            text = (ROOT / "skills" / name / "SKILL.md").read_text(encoding="utf-8")
-            frontmatter = text.split("---", 2)[1]
-            description = next(
-                line.split(":", 1)[1].strip().strip('"')
-                for line in frontmatter.splitlines()
-                if line.startswith("description:")
-            )
-            self.assertLessEqual(len(description), 180, name)
+            fields = frontmatter(ROOT / "skills" / name / "SKILL.md")
+            self.assertEqual(name, fields.get("name"), name)
+            self.assertLessEqual(len(fields["description"]), 180, name)
 
     def test_skill_references_resolve_and_stale_syntax_is_absent(self) -> None:
         skill_reference = re.compile(r"\$([a-z][a-z0-9-]+)")

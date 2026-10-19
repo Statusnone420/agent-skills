@@ -42,13 +42,16 @@ substituting. Claude Code's variant contains no Codex model names or custom agen
 
 ```mermaid
 flowchart LR
-    S["Canonical skills<br/>skills/"] --> B["Adapter builder<br/>tools/build_adapters.py"]
+    S["Canonical skills<br/>skills/"] --> B["Catalog and builder<br/>tools/build_adapters.py"]
     B --> C["Codex<br/>plugins/"]
     B --> A["Claude Code<br/>adapters/claude/"]
+    B --> M["Marketplaces<br/>.agents/plugins/ · .claude-plugin/"]
 ```
 
-`skills/` is the only canonical workflow source. Generated host copies must never be edited by
-hand. Cursor/Grok Bot and ZCode are retired; their artwork is preserved in `assets/retired-hosts/`.
+`skills/` is the only canonical workflow source. Plugin and marketplace metadata live in one catalog
+at the top of `tools/build_adapters.py`. Host copies, plugin manifests, and both marketplace files
+are generated and must never be edited by hand. Cursor/Grok Bot and ZCode are retired; their
+artwork is preserved in `assets/retired-hosts/`.
 
 ## Invocation contract
 
@@ -61,16 +64,18 @@ hand. Cursor/Grok Bot and ZCode are retired; their artwork is preserved in `asse
 | Path | Role |
 |---|---|
 | `skills/` | Canonical skill instructions, assets, and host variants. |
+| `tools/build_adapters.py` | Plugin catalog and the builder for every generated file. |
 | `plugins/` | Generated Codex skills plus Codex plugin manifests. |
 | `adapters/claude/plugins/` | Generated Claude Code distribution. |
 | `assets/plugins/` | Canonical plugin artwork. |
 | `assets/retired-hosts/` | Preserved artwork from retired adapters, with SHA-256 fingerprints. |
-| `.agents/plugins/marketplace.json` | Codex marketplace. |
-| `.claude-plugin/marketplace.json` | Claude Code marketplace. |
+| `.agents/plugins/marketplace.json` | Generated Codex marketplace. |
+| `.claude-plugin/marketplace.json` | Generated Claude Code marketplace. |
 
 ## Rebuild and verify
 
-Edit only the canonical source under `skills/`, then run:
+Edit skills under `skills/` and plugin metadata in the catalog in `tools/build_adapters.py`, then
+run:
 
 ```sh
 python3 tools/build_adapters.py
@@ -79,10 +84,12 @@ python3 -m unittest discover -s tests -v
 claude plugin validate . --strict
 ```
 
-The verification suite checks exact skill membership, manual-use metadata, marketplace and manifest
-agreement, icon packaging, host-specific orchestration, attribution, the absence of workflow hooks,
-and preserved artwork from retired hosts. Also validate all canonical and generated Codex skills
-with Codex's `quick_validate.py`, and each Claude plugin with `claude plugin validate PATH --strict`.
+The verification suite rebuilds every generated file in a temporary folder and compares it byte for
+byte with the committed copy. It also checks exact skill membership, manual-use metadata,
+marketplace links, text files under 16 KB, host-specific orchestration, attribution, the absence of
+workflow hooks, and preserved artwork from retired hosts. Also validate all canonical and generated
+Codex skills with Codex's `quick_validate.py`, and each Claude plugin with
+`claude plugin validate PATH --strict`.
 Windows can use `python` in place of `python3`; set `PYTHONUTF8=1` for validators that use the
 platform's default text encoding.
 

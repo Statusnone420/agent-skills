@@ -1,7 +1,7 @@
 {
   "name": "agent-control",
   "version": "0.3.1",
-  "description": "Manual-only native subagent orchestration and adaptive software-development discipline.",
+  "description": "Explicit-only workflows for proportional development discipline and bounded agent coordination.",
   "author": {
     "name": "Statusnone"
   },
@@ -9,10 +9,10 @@
   "repository": "https://github.com/Statusnone420/agent-skills",
   "license": "MIT",
   "keywords": [
-    "workflow",
+    "agents",
     "orchestration",
     "delegation",
-    "superpowers",
-    "verification"
+    "workflow",
+    "superpowers"
   ]
 }

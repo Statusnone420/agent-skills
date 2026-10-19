@@ -1,7 +1,7 @@
 # Repository rules
 
 - Treat `skills/` as the only canonical workflow source.
-- Regenerate host adapters with `python3 tools/build_adapters.py`; do not hand-edit generated skill copies.
+- Regenerate adapters and marketplaces with `python3 tools/build_adapters.py`; never hand-edit generated files. Plugin metadata lives in its catalog.
 - Keep every Codex skill at `allow_implicit_invocation: false`.
 - Keep every Claude skill at `disable-model-invocation: true`.
 - Support Codex and Claude Code on Windows and macOS. Do not add other host adapters or marketplaces without explicit approval.
@@ -16,7 +16,7 @@
 ## Code Review Rules
 
 - P1: any break of the repository rules above, especially:
-  - generated adapters that drift from `skills/` or were edited by hand
+  - generated files that drift from `skills/` or the catalog, or were edited by hand
   - invocation settings that contradict the rules above
   - broken skill frontmatter
   - changed or removed MIT, `NOTICE.md`, or `ORIGIN.md` attribution

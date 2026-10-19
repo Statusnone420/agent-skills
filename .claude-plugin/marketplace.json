@@ -8,7 +8,7 @@
     {
       "name": "engineering-workflows",
       "source": "./adapters/claude/plugins/engineering-workflows",
-      "description": "Manual engineering, debugging, comment discipline, design, planning, and review workflows.",
+      "description": "Explicit-only engineering, debugging, comment discipline, design, planning, contract review, and documentation workflows.",
       "version": "0.5.1",
       "author": {
         "name": "Statusnone"
@@ -17,7 +17,7 @@
     {
       "name": "communication-tools",
       "source": "./adapters/claude/plugins/communication-tools",
-      "description": "Manual-only plain-English and concise communication assistance.",
+      "description": "Explicit-only tools for clearer, denser technical communication.",
       "version": "0.4.1",
       "author": {
         "name": "Statusnone"
@@ -26,7 +26,7 @@
     {
       "name": "agent-control",
       "source": "./adapters/claude/plugins/agent-control",
-      "description": "Manual-only native subagent orchestration and adaptive software-development discipline.",
+      "description": "Explicit-only workflows for proportional development discipline and bounded agent coordination.",
       "version": "0.3.1",
       "author": {
         "name": "Statusnone"
@@ -35,7 +35,7 @@
     {
       "name": "frontend-design",
       "source": "./adapters/claude/plugins/frontend-design",
-      "description": "Manual-only distinctive interface-design guidance.",
+      "description": "Statusnone-maintained guidance for distinctive, intentional interface design.",
       "version": "0.1.1",
       "author": {
         "name": "Statusnone"
