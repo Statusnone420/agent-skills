@@ -2,14 +2,14 @@
 
 - Treat `skills/` as the only canonical workflow source.
 - Regenerate adapters and marketplaces with `python3 tools/build_adapters.py`; never hand-edit generated files. Plugin metadata lives in its catalog.
-- Keep every Codex skill at `allow_implicit_invocation: false`.
-- Keep every Claude skill at `disable-model-invocation: true`.
+- Ship one plugin, `agent-skills`, with every skill as a peer. Do not add plugin buckets.
+- Skills load from their descriptions; only `orchestrate` and `english` are manual-only. Change that list only with approval.
 - Support Codex and Claude Code on Windows and macOS. Do not add other host adapters or marketplaces without explicit approval.
 - Keep Codex `orchestrate` aware of the current session's models and effort levels. Keep the Claude variant native to Claude Code and free of Codex model or role names.
-- Preserve all artwork, including archived host and skill artwork. Verify file hashes when moving it.
+- Preserve all artwork, including retired host, plugin, and skill artwork. Verify file hashes when moving it.
 - Do not add hooks, automatic bootstrap, issue-tracker setup, commits, pushes, or publishing behavior to a workflow.
 - Preserve the upstream MIT notice and `ORIGIN.md` attribution.
-- Run the adapter check, unit tests, Codex validation, and strict Claude validation before release claims. Verify that retired host distributions stay absent and their archived artwork stays intact.
+- Before release claims, also run Codex validation and strict Claude validation.
 - Before every push, run `python3 tools/build_adapters.py --check` and `python3 -m unittest discover -s tests -v`. CI runs the same check on every pull request.
 - Do not publish, push, or change marketplace registrations without the user's explicit approval.
 

@@ -1,0 +1,21 @@
+{
+  "name": "agent-skills",
+  "version": "1.0.0",
+  "description": "Focused peer skills for codebase design, debugging, reviews, docs, plain English, frontend design, and subagents.",
+  "author": {
+    "name": "Statusnone"
+  },
+  "homepage": "https://github.com/Statusnone420/agent-skills",
+  "repository": "https://github.com/Statusnone420/agent-skills",
+  "license": "MIT AND Apache-2.0",
+  "keywords": [
+    "skills",
+    "debugging",
+    "design",
+    "documentation",
+    "review",
+    "frontend",
+    "communication",
+    "orchestration"
+  ]
+}

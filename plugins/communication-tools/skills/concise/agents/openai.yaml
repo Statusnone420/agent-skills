@@ -1,8 +1,0 @@
-interface:
-  display_name: "Concise"
-  short_description: "Compression without loss for clear answers"
-  default_prompt: "Use $concise to give the shortest complete answer without losing evidence, caveats, or next actions."
-  icon_small: "./assets/icon.png"
-  icon_large: "./assets/icon.png"
-policy:
-  allow_implicit_invocation: false

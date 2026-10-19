@@ -1,8 +1,0 @@
-interface:
-  display_name: "Superpowers"
-  short_description: "Adaptive build, TDD, and verification workflow"
-  default_prompt: "Use $superpowers for a compact, adaptive build-and-verify workflow."
-  icon_small: "./assets/icon.png"
-  icon_large: "./assets/icon.png"
-policy:
-  allow_implicit_invocation: false

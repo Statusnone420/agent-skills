@@ -1,0 +1,8 @@
+interface:
+  display_name: "Conceptual Review"
+  short_description: "Check reasoning or a spec before building"
+  default_prompt: "Check whether this plan or implementation spec holds up before we build it."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: true

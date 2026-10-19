@@ -21,8 +21,10 @@ AUTHOR_URL = "https://github.com/Statusnone420"
 REPOSITORY = "https://github.com/Statusnone420/agent-skills"
 PLUGIN_ICON = "./assets/plugin-icon.png"
 MARKETPLACE_NAME = "statusnone-agent-skills"
-MARKETPLACE_DISPLAY_NAME = "Statusnone Agent Skills"
-MARKETPLACE_DESCRIPTION = "Explicit-only personal workflows maintained by Statusnone."
+MARKETPLACE_DISPLAY_NAME = "Agent Skills"
+MARKETPLACE_DESCRIPTION = "One plugin of focused agent skills, maintained by Statusnone."
+CLAUDE_ONLY_FRONTMATTER = "disable-model-invocation:"
+YAML_RESERVED_STARTS = tuple("[{&*!|>%@`#")
 
 
 def write_text_lf(path: Path, text: str) -> None:
@@ -40,6 +42,7 @@ class SkillMetadata:
     display_name: str
     short_description: str
     default_prompt: str | None = None
+    implicit: bool = True
 
 
 @dataclass(frozen=True)
@@ -59,62 +62,52 @@ class PluginDefinition:
 
 
 SKILLS = {
-    "grill-me": SkillMetadata("Grill Me", "Sharpen a plan through structured interview"),
-    "domain-modeling": SkillMetadata(
-        "Domain Modeling", "Build and sharpen a project's domain language"
+    "codebase-design": SkillMetadata(
+        "Codebase Design",
+        "Design deep modules and real seams",
+        "Review this module's interface and propose a deeper design with fewer, clearer seams.",
     ),
-    "diagnosing-bugs": SkillMetadata("Diagnosing Bugs", "Diagnose difficult bugs and regressions"),
-    "comment-discipline": SkillMetadata(
-        "Comment Discipline",
-        "Stop comments from replacing durable engineering",
-        "Use $comment-discipline to prevent comment-backed shortcuts and clean up comment debt in this scope.",
-    ),
-    "tdd": SkillMetadata("TDD", "Develop through a red-green feedback loop"),
-    "codebase-design": SkillMetadata("Codebase Design", "Design deeper modules and cleaner seams"),
     "conceptual-review": SkillMetadata(
         "Conceptual Review",
-        "Challenge technical reasoning before implementation",
-        "Use $conceptual-review to check whether this technical conclusion follows from its evidence and assumptions.",
-    ),
-    "contract-review": SkillMetadata(
-        "Contract Review",
-        "Test an implementation contract against evidence",
-        "Use $contract-review to determine whether this implementation contract is ready.",
-    ),
-    "repository-docs": SkillMetadata(
-        "Repository Docs",
-        "Map and retrieve trustworthy repository guidance",
-        "Use $repository-docs to map this repository's documentation and load the guidance needed for my task.",
-    ),
-    "maintaining-docs": SkillMetadata(
-        "Maintaining Docs",
-        "Create and update evidence-backed repository docs",
-        "Use $maintaining-docs to update this repository's documentation from the verified change.",
-    ),
-    "english": SkillMetadata(
-        "English",
-        "Plain-English rescue for technical explanations",
-        "Use $english to explain the selected text or current situation in plain language without taking action.",
+        "Check reasoning or a spec before building",
+        "Check whether this plan or implementation spec holds up before we build it.",
     ),
     "concise": SkillMetadata(
         "Concise",
-        "Compression without loss for clear answers",
-        "Use $concise to give the shortest complete answer without losing evidence, caveats, or next actions.",
+        "Shortest complete answer, nothing lost",
+        "Give me the shortest complete answer, keeping every fact, caveat, and next step.",
+    ),
+    "diagnosing-bugs": SkillMetadata(
+        "Diagnosing Bugs",
+        "Root-cause hard bugs with a tight loop",
+        "Find the root cause of this bug with a fast, repeatable reproduction.",
+    ),
+    "english": SkillMetadata(
+        "English",
+        "Plain-English explanation, no action",
+        "Explain the selected text or current situation in plain English without taking action.",
+        implicit=False,
+    ),
+    "frontend-design": SkillMetadata(
+        "Frontend Design",
+        "Distinctive, deliberate interface design",
+        "Give this interface a distinctive, intentional visual direction.",
+    ),
+    "maintaining-docs": SkillMetadata(
+        "Maintaining Docs",
+        "Update docs from verified evidence",
+        "Update this repository's documentation to match the verified change.",
     ),
     "orchestrate": SkillMetadata(
         "Orchestrate",
         "Coordinate focused subagents",
-        "Use $orchestrate to delegate bounded supporting work while keeping decisions and integration in the parent.",
+        "Delegate the independent parts of this task to focused subagents and integrate the results.",
+        implicit=False,
     ),
-    "superpowers": SkillMetadata(
-        "Superpowers",
-        "Adaptive build, TDD, and verification workflow",
-        "Use $superpowers for a compact, adaptive build-and-verify workflow.",
-    ),
-    "frontend-design": SkillMetadata(
-        "Frontend Design",
-        "Create distinctive intentional interfaces",
-        "Use $frontend-design to give this interface a distinctive, intentional visual direction.",
+    "repository-docs": SkillMetadata(
+        "Repository Docs",
+        "Find the guidance a task needs",
+        "Find and load the repository guidance I need for this task.",
     ),
 }
 
@@ -124,113 +117,45 @@ HOST_VARIANTS = {
 
 
 PLUGINS = {
-    "engineering-workflows": PluginDefinition(
-        skills=(
-            "grill-me",
-            "domain-modeling",
-            "diagnosing-bugs",
-            "comment-discipline",
-            "tdd",
-            "codebase-design",
-            "conceptual-review",
-            "contract-review",
-            "repository-docs",
-            "maintaining-docs",
-        ),
-        version="0.5.1",
+    "agent-skills": PluginDefinition(
+        skills=tuple(SKILLS),
+        version="1.0.0",
         description=(
-            "Explicit-only engineering, debugging, comment discipline, design, planning, "
-            "contract review, and documentation workflows."
+            "Focused peer skills for codebase design, debugging, reviews, docs, plain English, "
+            "frontend design, and subagents."
         ),
-        display_name="Engineering Workflows",
-        short_description="Manual engineering and planning workflows",
+        display_name="Agent Skills",
+        short_description="Focused skills for everyday agent work",
         long_description=(
-            "Ten explicit-only workflows for planning, domain modeling, debugging, comment "
-            "discipline, TDD, codebase design, conceptual and contract review, and repository "
-            "documentation."
+            "Nine peer skills: codebase design, conceptual and spec review, concise answers, bug "
+            "diagnosis, plain-English explanations, frontend design, documentation lookup and "
+            "upkeep, and subagent orchestration."
         ),
         category="Developer Tools",
         capabilities=("Interactive", "Read", "Write"),
         keywords=(
-            "engineering",
+            "skills",
             "debugging",
-            "comments",
-            "tdd",
-            "planning",
-            "domain-modeling",
-            "reasoning",
+            "design",
+            "documentation",
+            "review",
+            "frontend",
+            "communication",
+            "orchestration",
         ),
         brand_color="#6D4AFF",
         default_prompts=(
-            "Use $grill-me to stress-test this plan.",
-            "Use $diagnosing-bugs to diagnose this issue.",
-            "Use $comment-discipline to prevent comment-backed shortcuts and clean up comment debt in this scope.",
+            "Find the root cause of this flaky test.",
+            "Check whether this plan holds up before we build it.",
+            "Give this page a distinctive visual direction.",
         ),
-    ),
-    "communication-tools": PluginDefinition(
-        skills=("english", "concise"),
-        version="0.4.1",
-        description="Explicit-only tools for clearer, denser technical communication.",
-        display_name="Communication Tools",
-        short_description="Manual clear communication",
-        long_description="Two explicit-only tools for plain-English rescue and compression without loss.",
-        category="Productivity",
-        capabilities=("Interactive", "Read"),
-        keywords=("communication", "plain-english", "concise", "explanation"),
-        brand_color="#7C4DFF",
-        default_prompts=(
-            "Use $english to explain this in plain language.",
-            "Use $concise to compress this answer without losing important information.",
-        ),
-    ),
-    "agent-control": PluginDefinition(
-        skills=("orchestrate", "superpowers"),
-        version="0.3.1",
-        description=(
-            "Explicit-only workflows for proportional development discipline and bounded agent "
-            "coordination."
-        ),
-        display_name="Agent Control",
-        short_description="Manual coordination and development control",
-        long_description=(
-            "Two explicit-only workflows for proportional development discipline and bounded agent "
-            "coordination."
-        ),
-        category="Developer Tools",
-        capabilities=("Interactive", "Read", "Write"),
-        keywords=("agents", "orchestration", "delegation", "workflow", "superpowers"),
-        brand_color="#7C3AED",
-        default_prompts=(
-            "Use $superpowers for a compact build-and-verify workflow.",
-            "Use $orchestrate to coordinate this large-scope task.",
-        ),
-    ),
-    "frontend-design": PluginDefinition(
-        skills=("frontend-design",),
-        version="0.1.1",
-        description="Statusnone-maintained guidance for distinctive, intentional interface design.",
-        display_name="Frontend Design",
-        short_description="Distinctive intentional interface design",
-        long_description=(
-            "An explicit-only Statusnone-maintained Codex and Claude adaptation for opinionated, "
-            "subject-specific interface design."
-        ),
-        category="Design",
-        capabilities=("Read", "Write"),
-        keywords=("frontend", "design", "ui", "ux", "visual-direction"),
-        brand_color="#8B5CF6",
-        default_prompts=(
-            "Use $frontend-design to give this interface a distinctive visual direction.",
-        ),
-        license="Apache-2.0",
+        license="MIT AND Apache-2.0",
     ),
 }
 
 
 def add_claude_manual_only(skill_md: Path) -> None:
     text = skill_md.read_text(encoding="utf-8")
-    if "disable-model-invocation:" in text:
-        raise ValueError(f"Claude-only frontmatter leaked into canonical source: {skill_md}")
     closing = text.find("\n---", 4)
     if closing == -1:
         raise ValueError(f"Missing closing frontmatter marker: {skill_md}")
@@ -254,7 +179,7 @@ def add_codex_metadata(skill_dir: Path, name: str) -> None:
             '  icon_small: "./assets/icon.png"',
             '  icon_large: "./assets/icon.png"',
             "policy:",
-            "  allow_implicit_invocation: false",
+            f"  allow_implicit_invocation: {'true' if metadata.implicit else 'false'}",
         ]
     )
     write_text_lf(agents / "openai.yaml", "\n".join(lines) + "\n")
@@ -290,7 +215,8 @@ def copy_skills(names: tuple[str, ...], destination: Path, host: str) -> None:
         if host == "codex":
             add_codex_metadata(skill_dir, name)
         elif host == "claude":
-            add_claude_manual_only(skill_dir / "SKILL.md")
+            if not SKILLS[name].implicit:
+                add_claude_manual_only(skill_dir / "SKILL.md")
         else:
             raise ValueError(f"Unsupported host: {host}")
 
@@ -454,6 +380,23 @@ def replace(source: Path, destination: Path) -> None:
         shutil.copyfile(source, destination)
 
 
+def frontmatter_problems(text: str) -> list[str]:
+    if not text.startswith("---\n"):
+        return ["missing opening frontmatter marker"]
+    closing = text.find("\n---", 4)
+    if closing == -1:
+        return ["missing closing frontmatter marker"]
+    problems = []
+    for line in text[4:closing].splitlines():
+        key, separator, value = line.partition(":")
+        value = value.strip()
+        if not separator or not value or value[0] in "'\"":
+            continue
+        if ": " in value or " #" in value or value.endswith(":") or value.startswith(YAML_RESERVED_STARTS):
+            problems.append(f"quote the {key.strip()} value; plain YAML cannot hold it")
+    return problems
+
+
 def validate_configuration() -> None:
     names = {path.name for path in SOURCE.iterdir() if path.is_dir()}
     if names != set(SKILLS):
@@ -473,6 +416,14 @@ def validate_configuration() -> None:
     for name in SKILLS:
         if not (SOURCE / name / "assets" / "icon.png").is_file():
             raise SystemExit(f"Missing canonical skill icon: {name}")
+
+    for path in SOURCE.rglob("*.md"):
+        if CLAUDE_ONLY_FRONTMATTER in path.read_text(encoding="utf-8"):
+            raise SystemExit(f"Claude-only frontmatter leaked into canonical source: {path}")
+
+    for path in [*SOURCE.glob("*/SKILL.md"), *SOURCE.glob("*/variants/*.md")]:
+        for problem in frontmatter_problems(path.read_text(encoding="utf-8")):
+            raise SystemExit(f"Invalid frontmatter in {path}: {problem}")
 
     variant_names = {
         path.parent.name for path in SOURCE.glob("*/variants") if path.is_dir()

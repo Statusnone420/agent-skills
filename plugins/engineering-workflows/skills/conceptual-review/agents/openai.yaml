@@ -1,8 +1,0 @@
-interface:
-  display_name: "Conceptual Review"
-  short_description: "Challenge technical reasoning before implementation"
-  default_prompt: "Use $conceptual-review to check whether this technical conclusion follows from its evidence and assumptions."
-  icon_small: "./assets/icon.png"
-  icon_large: "./assets/icon.png"
-policy:
-  allow_implicit_invocation: false

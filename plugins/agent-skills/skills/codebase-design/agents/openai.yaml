@@ -1,0 +1,8 @@
+interface:
+  display_name: "Codebase Design"
+  short_description: "Design deep modules and real seams"
+  default_prompt: "Review this module's interface and propose a deeper design with fewer, clearer seams."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: true

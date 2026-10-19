@@ -1,8 +1,0 @@
-interface:
-  display_name: "Contract Review"
-  short_description: "Test an implementation contract against evidence"
-  default_prompt: "Use $contract-review to determine whether this implementation contract is ready."
-  icon_small: "./assets/icon.png"
-  icon_large: "./assets/icon.png"
-policy:
-  allow_implicit_invocation: false

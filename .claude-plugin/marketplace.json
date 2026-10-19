@@ -3,40 +3,13 @@
   "owner": {
     "name": "Statusnone"
   },
-  "description": "Explicit-only personal workflows maintained by Statusnone.",
+  "description": "One plugin of focused agent skills, maintained by Statusnone.",
   "plugins": [
     {
-      "name": "engineering-workflows",
-      "source": "./adapters/claude/plugins/engineering-workflows",
-      "description": "Explicit-only engineering, debugging, comment discipline, design, planning, contract review, and documentation workflows.",
-      "version": "0.5.1",
-      "author": {
-        "name": "Statusnone"
-      }
-    },
-    {
-      "name": "communication-tools",
-      "source": "./adapters/claude/plugins/communication-tools",
-      "description": "Explicit-only tools for clearer, denser technical communication.",
-      "version": "0.4.1",
-      "author": {
-        "name": "Statusnone"
-      }
-    },
-    {
-      "name": "agent-control",
-      "source": "./adapters/claude/plugins/agent-control",
-      "description": "Explicit-only workflows for proportional development discipline and bounded agent coordination.",
-      "version": "0.3.1",
-      "author": {
-        "name": "Statusnone"
-      }
-    },
-    {
-      "name": "frontend-design",
-      "source": "./adapters/claude/plugins/frontend-design",
-      "description": "Statusnone-maintained guidance for distinctive, intentional interface design.",
-      "version": "0.1.1",
+      "name": "agent-skills",
+      "source": "./adapters/claude/plugins/agent-skills",
+      "description": "Focused peer skills for codebase design, debugging, reviews, docs, plain English, frontend design, and subagents.",
+      "version": "1.0.0",
       "author": {
         "name": "Statusnone"
       }

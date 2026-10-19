@@ -2,7 +2,8 @@
 
 ## Matt Pocock skills
 
-Portions of the Engineering Workflows plugin are derived from `mattpocock/skills`.
+Portions of the `agent-skills` suite (`codebase-design` and `diagnosing-bugs`) are derived from
+`mattpocock/skills`.
 
 Copyright (c) 2026 Matt Pocock
 
@@ -20,7 +21,8 @@ The original work is licensed under Apache License 2.0. The complete license is 
 
 ## Obra Superpowers inspiration
 
-The personal `superpowers` workflow acknowledges conceptual inspiration from `obra/superpowers`.
+The former personal `superpowers` workflow, retired in October 2026, acknowledged conceptual
+inspiration from `obra/superpowers`. One of its rules lives on in `diagnosing-bugs`.
 
 Copyright (c) 2025 Jesse Vincent
 

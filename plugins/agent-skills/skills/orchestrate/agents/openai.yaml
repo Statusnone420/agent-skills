@@ -1,0 +1,8 @@
+interface:
+  display_name: "Orchestrate"
+  short_description: "Coordinate focused subagents"
+  default_prompt: "Delegate the independent parts of this task to focused subagents and integrate the results."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: false

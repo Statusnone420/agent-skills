@@ -1,0 +1,8 @@
+interface:
+  display_name: "Concise"
+  short_description: "Shortest complete answer, nothing lost"
+  default_prompt: "Give me the shortest complete answer, keeping every fact, caveat, and next step."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: true

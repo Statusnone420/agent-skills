@@ -1,0 +1,44 @@
+{
+  "name": "agent-skills",
+  "version": "1.0.0",
+  "description": "Focused peer skills for codebase design, debugging, reviews, docs, plain English, frontend design, and subagents.",
+  "author": {
+    "name": "Statusnone",
+    "url": "https://github.com/Statusnone420"
+  },
+  "repository": "https://github.com/Statusnone420/agent-skills",
+  "license": "MIT AND Apache-2.0",
+  "keywords": [
+    "skills",
+    "debugging",
+    "design",
+    "documentation",
+    "review",
+    "frontend",
+    "communication",
+    "orchestration"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Agent Skills",
+    "shortDescription": "Focused skills for everyday agent work",
+    "longDescription": "Nine peer skills: codebase design, conceptual and spec review, concise answers, bug diagnosis, plain-English explanations, frontend design, documentation lookup and upkeep, and subagent orchestration.",
+    "composerIcon": "./assets/plugin-icon.png",
+    "logo": "./assets/plugin-icon.png",
+    "logoDark": "./assets/plugin-icon.png",
+    "brandColor": "#6D4AFF",
+    "developerName": "Statusnone",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/Statusnone420/agent-skills",
+    "defaultPrompt": [
+      "Find the root cause of this flaky test.",
+      "Check whether this plan holds up before we build it.",
+      "Give this page a distinctive visual direction."
+    ]
+  }
+}
