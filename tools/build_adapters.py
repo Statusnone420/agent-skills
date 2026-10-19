@@ -90,8 +90,8 @@ SKILLS = {
     ),
     "frontend-design": SkillMetadata(
         "Frontend Design",
-        "Distinctive, deliberate interface design",
-        "Give this interface a distinctive, intentional visual direction.",
+        "Distinctive, accessible interface design",
+        "Give this interface a distinctive visual direction that meets the accessibility floor.",
     ),
     "maintaining-docs": SkillMetadata(
         "Maintaining Docs",
@@ -119,7 +119,7 @@ HOST_VARIANTS = {
 PLUGINS = {
     "agent-skills": PluginDefinition(
         skills=tuple(SKILLS),
-        version="1.0.0",
+        version="1.1.0",
         description=(
             "Focused peer skills for codebase design, debugging, reviews, docs, plain English, "
             "frontend design, and subagents."
@@ -185,6 +185,11 @@ def add_codex_metadata(skill_dir: Path, name: str) -> None:
     write_text_lf(agents / "openai.yaml", "\n".join(lines) + "\n")
 
 
+def variant_file_name(host: str) -> str:
+    # A plain "claude.md" would load as CLAUDE.md on case-insensitive file systems.
+    return f"{host}.SKILL.md"
+
+
 def apply_host_variant(skill_dir: Path, name: str, host: str) -> None:
     variants = skill_dir / "variants"
     expected_hosts = HOST_VARIANTS.get(name)
@@ -195,14 +200,15 @@ def apply_host_variant(skill_dir: Path, name: str, host: str) -> None:
 
     if not variants.is_dir():
         raise ValueError(f"Missing host variants: {variants}")
-    actual_hosts = {path.stem for path in variants.glob("*.md")}
-    if actual_hosts != expected_hosts:
+    expected_files = {variant_file_name(expected_host) for expected_host in expected_hosts}
+    actual_files = {path.name for path in variants.iterdir()}
+    if actual_files != expected_files:
         raise ValueError(
-            f"Host variant mismatch for {name}: expected {sorted(expected_hosts)}, "
-            f"found {sorted(actual_hosts)}"
+            f"Host variant mismatch for {name}: expected {sorted(expected_files)}, "
+            f"found {sorted(actual_files)}"
         )
     if host != "codex":
-        shutil.copyfile(variants / f"{host}.md", skill_dir / "SKILL.md")
+        shutil.copyfile(variants / variant_file_name(host), skill_dir / "SKILL.md")
     shutil.rmtree(variants)
 
 
