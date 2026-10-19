@@ -1,33 +1,24 @@
-# Next skill audit
+# Skill audit
 
-Status: proposed next task; the broader audit has not started.
+Status: done in October 2026. This page records the outcome and the open follow-ups.
 
-Scope: the 15 personal skills for Codex and Claude Code on Windows and macOS. Review overlap with
-installed third-party skills without changing those plugins. Cursor/Grok Bot and ZCode are retired.
-Preserve all canonical and archived artwork and attribution.
+## Outcome
 
-## Evidence to collect
+- One plugin, `agent-skills`, replaces the four plugins. Every skill is a peer inside it.
+- Kept (9): `codebase-design`, `conceptual-review`, `concise`, `diagnosing-bugs`, `english`,
+  `frontend-design`, `maintaining-docs`, `orchestrate`, and `repository-docs`.
+- Merged: `contract-review` into `conceptual-review` as spec mode, and the stop-after-two-failed-fixes
+  rule from `superpowers` into `diagnosing-bugs`.
+- Retired: `superpowers`, `contract-review`, `domain-modeling`, `comment-discipline`, `grill-me`, and
+  `tdd`. `comment-discipline` became a short rule for personal agent instructions.
+- Invocation: skills load from their descriptions. `orchestrate` stays manual-only because it starts
+  subagents, and `english` stays manual-only because it refuses tool use.
+- Cursor/Grok Bot and ZCode stay retired. Grok Build reads the Claude Code marketplace directly, so
+  it needs no separate adapter.
 
-- For each machine and host, record the registered source, enabled state, installed version, and
-  file comparison with the repository. Do not treat a Git push as an installation update.
-- Inspect actual explicit invocations and skill reads over an agreed history window. Exclude
-  catalog listings, quoted mentions, and audit activity. Label missing history as unknown usage.
-- Compare each skill's purpose with current host capabilities, user instructions, neighboring
-  skills, and installed alternatives. Check authorization, model selection, context cost, and
-  whether the workflow improves the requested outcome.
-- Classify each skill as keep, revise, consolidate, or retire from active distribution, with
-  evidence and a proposed destination for any consolidated behavior.
-- Check representative requests, including cases where the skill should not run. Static
-  validation does not establish behavioral quality. Obtain explicit delegation authorization
-  before using subagents for evaluations.
+## Follow-ups
 
-## Review checkpoint
-
-Return the inventory, evidence limits, and proposed changes before editing workflows. Separate
-installation fixes from instruction changes. Keep useful specialist behavior when consolidating.
-Preserve artwork even when a skill is retired. Do not change marketplace registrations or publish
-the next release without authorization.
-
-The current patch removes fixed model rankings from `orchestrate`, retains separate Codex and
-Claude variants, and narrows distribution to those two hosts. Mac runtime checks remain separate
-from Windows validation and installation checks.
+- Refresh `frontend-design` against the current upstream skill and WCAG 2.2 AA basics.
+- Document how to load the suite in each host, and mark the steps that are not verified.
+- After each release, check the installed copies on every Windows and Mac machine. Repository checks
+  do not prove runtime behavior.

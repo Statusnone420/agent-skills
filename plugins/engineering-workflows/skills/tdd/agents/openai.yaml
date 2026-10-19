@@ -1,7 +1,0 @@
-interface:
-  display_name: "TDD"
-  short_description: "Develop through a red-green feedback loop"
-  icon_small: "./assets/icon.png"
-  icon_large: "./assets/icon.png"
-policy:
-  allow_implicit_invocation: false

@@ -1,7 +1,0 @@
-interface:
-  display_name: "Domain Modeling"
-  short_description: "Build and sharpen a project's domain language"
-  icon_small: "./assets/icon.png"
-  icon_large: "./assets/icon.png"
-policy:
-  allow_implicit_invocation: false

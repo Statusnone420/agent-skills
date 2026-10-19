@@ -1,6 +1,6 @@
 ---
 name: frontend-design
-description: Create distinctive, intentional visual interfaces instead of generic defaults.
+description: Gives web interfaces a distinctive, deliberate visual direction instead of generic defaults. Use when building or restyling a page, component, or app UI.
 license: Complete terms in LICENSE.txt
 ---
 

@@ -1,0 +1,8 @@
+interface:
+  display_name: "Diagnosing Bugs"
+  short_description: "Root-cause hard bugs with a tight loop"
+  default_prompt: "Find the root cause of this bug with a fast, repeatable reproduction."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: true

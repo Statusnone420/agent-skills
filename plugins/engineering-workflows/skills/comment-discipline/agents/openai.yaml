@@ -1,8 +1,0 @@
-interface:
-  display_name: "Comment Discipline"
-  short_description: "Stop comments from replacing durable engineering"
-  default_prompt: "Use $comment-discipline to prevent comment-backed shortcuts and clean up comment debt in this scope."
-  icon_small: "./assets/icon.png"
-  icon_large: "./assets/icon.png"
-policy:
-  allow_implicit_invocation: false

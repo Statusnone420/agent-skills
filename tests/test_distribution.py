@@ -15,9 +15,13 @@ sys.path.insert(0, str(ROOT / "tools"))
 
 import build_adapters
 
-ALL_SKILLS = set(build_adapters.SKILLS)
+SKILLS = build_adapters.SKILLS
 PLUGINS = build_adapters.PLUGINS
+ALL_SKILLS = set(SKILLS)
+SUITE = "agent-skills"
+MANUAL_ONLY = {"english", "orchestrate"}
 MAX_SKILL_FILE_BYTES = 16 * 1024
+MAX_DESCRIPTION_CHARS = 180
 
 
 def directory_names(path: Path) -> set[str]:
@@ -64,26 +68,51 @@ class DistributionTests(unittest.TestCase):
                 if path.is_file() and path.suffix != ".png":
                     self.assertLess(path.stat().st_size, MAX_SKILL_FILE_BYTES, path)
 
-    def test_canonical_skill_set_is_exact(self) -> None:
+    def test_catalog_ships_one_suite(self) -> None:
+        self.assertEqual([SUITE], list(PLUGINS))
         self.assertEqual(ALL_SKILLS, directory_names(ROOT / "skills"))
-        memberships = [name for plugin in PLUGINS.values() for name in plugin.skills]
-        self.assertEqual(sorted(ALL_SKILLS), sorted(memberships))
+        self.assertEqual(sorted(ALL_SKILLS), sorted(PLUGINS[SUITE].skills))
+        for folder in ("plugins", "adapters/claude/plugins", "assets/plugins"):
+            self.assertEqual({SUITE}, directory_names(ROOT / folder), folder)
 
-    def test_codex_is_explicit_only(self) -> None:
-        for plugin, definition in PLUGINS.items():
-            root = ROOT / "plugins" / plugin / "skills"
-            for name in definition.skills:
-                metadata = (root / name / "agents" / "openai.yaml").read_text(encoding="utf-8")
-                self.assertIn("allow_implicit_invocation: false", metadata, name)
-                self.assertIn('icon_small: "./assets/icon.png"', metadata, name)
-                self.assertIn('icon_large: "./assets/icon.png"', metadata, name)
+    def test_manual_only_skills_are_deliberate(self) -> None:
+        self.assertEqual(MANUAL_ONLY, {name for name, skill in SKILLS.items() if not skill.implicit})
 
-    def test_claude_is_explicit_only(self) -> None:
-        for plugin, definition in PLUGINS.items():
-            root = ROOT / "adapters" / "claude" / "plugins" / plugin / "skills"
-            for name in definition.skills:
-                skill = (root / name / "SKILL.md").read_text(encoding="utf-8")
-                self.assertIn("disable-model-invocation: true", skill.split("---", 2)[1], name)
+    def test_invocation_settings_match_catalog(self) -> None:
+        for name, skill in SKILLS.items():
+            codex = (ROOT / "plugins" / SUITE / "skills" / name / "agents" / "openai.yaml").read_text(
+                encoding="utf-8"
+            )
+            self.assertIn(f"allow_implicit_invocation: {str(skill.implicit).lower()}", codex, name)
+            self.assertIn('icon_small: "./assets/icon.png"', codex, name)
+            self.assertIn('icon_large: "./assets/icon.png"', codex, name)
+            claude = (ROOT / "adapters/claude/plugins" / SUITE / "skills" / name / "SKILL.md").read_text(
+                encoding="utf-8"
+            )
+            manual = "disable-model-invocation: true" in claude.split("---", 2)[1]
+            self.assertEqual(not skill.implicit, manual, name)
+
+    def test_descriptions_have_trigger_lines(self) -> None:
+        sources = [ROOT / "skills" / name / "SKILL.md" for name in ALL_SKILLS]
+        sources += list((ROOT / "skills").glob("*/variants/*.md"))
+        for path in sources:
+            skill = path.parent.name if path.name == "SKILL.md" else path.parents[1].name
+            fields = frontmatter(path)
+            description = fields["description"]
+            self.assertEqual(skill, fields.get("name"), path)
+            self.assertIn("Use when", description, path)
+            self.assertLessEqual(len(description), MAX_DESCRIPTION_CHARS, path)
+            self.assertNotRegex(description, "[<>]", path)
+
+    def test_frontmatter_check_rejects_values_plain_yaml_cannot_hold(self) -> None:
+        for value in ("Designs deep modules: small interfaces.", "Use C # here.", "[draft] skill"):
+            text = f"---\nname: sample\ndescription: {value}\n---\n"
+            self.assertEqual(1, len(build_adapters.frontmatter_problems(text)), value)
+        quoted = '---\nname: sample\ndescription: "Designs deep modules: small interfaces."\n---\n'
+        self.assertEqual([], build_adapters.frontmatter_problems(quoted))
+        self.assertEqual(
+            ["missing closing frontmatter marker"], build_adapters.frontmatter_problems("---\nname: x\n")
+        )
 
     def test_every_canonical_skill_has_a_unique_icon(self) -> None:
         digests = {
@@ -92,8 +121,7 @@ class DistributionTests(unittest.TestCase):
         }
         self.assertEqual(len(ALL_SKILLS), len(digests))
 
-    def test_retired_skill_artwork_is_preserved(self) -> None:
-        artwork = ROOT / "assets" / "retired-skills"
+    def test_retired_artwork_is_preserved(self) -> None:
         self.assertEqual(
             {
                 "grilling.png",
@@ -103,15 +131,25 @@ class DistributionTests(unittest.TestCase):
                 "luna-subagents.png",
                 "ask-pro.png",
                 "claude-handoff.png",
+                "comment-discipline.png",
+                "contract-review.png",
+                "domain-modeling.png",
+                "grill-me.png",
+                "superpowers.png",
+                "tdd.png",
             },
-            {path.name for path in artwork.glob("*.png")},
+            {path.name for path in (ROOT / "assets/retired-skills").glob("*.png")},
+        )
+        self.assertEqual(
+            {"agent-control.png", "communication-tools.png", "frontend-design.png"},
+            {path.name for path in (ROOT / "assets/retired-plugins").glob("*.png")},
         )
 
     def test_marketplace_entries_resolve_to_matching_manifests(self) -> None:
         codex_marketplace = json.loads((ROOT / ".agents/plugins/marketplace.json").read_text(encoding="utf-8"))
         claude_marketplace = json.loads((ROOT / ".claude-plugin/marketplace.json").read_text(encoding="utf-8"))
-        self.assertEqual(list(PLUGINS), [entry["name"] for entry in codex_marketplace["plugins"]])
-        self.assertEqual(list(PLUGINS), [entry["name"] for entry in claude_marketplace["plugins"]])
+        self.assertEqual([SUITE], [entry["name"] for entry in codex_marketplace["plugins"]])
+        self.assertEqual([SUITE], [entry["name"] for entry in claude_marketplace["plugins"]])
         for entry in codex_marketplace["plugins"]:
             plugin_root = ROOT / entry["source"]["path"]
             manifest = json.loads((plugin_root / ".codex-plugin/plugin.json").read_text(encoding="utf-8"))
@@ -127,14 +165,23 @@ class DistributionTests(unittest.TestCase):
             self.assertEqual(entry["version"], manifest["version"])
             self.assertTrue((plugin_root / "skills").is_dir(), entry["name"])
 
-    def test_consolidated_skills_keep_specialist_routes(self) -> None:
-        grill_me = (ROOT / "skills" / "grill-me" / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("$domain-modeling", grill_me)
+    def test_merged_skills_keep_specialist_behavior(self) -> None:
+        review = (ROOT / "skills/conceptual-review/SKILL.md").read_text(encoding="utf-8")
+        for marker in ("Reasoning mode", "Spec mode", "Acceptance power", "BLOCKING", "AMEND", "NIT", "**Ready**"):
+            self.assertIn(marker, review)
+        bugs = (ROOT / "skills/diagnosing-bugs/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("After two failed fix attempts, stop.", bugs)
+
+    def test_subagent_fan_out_needs_an_explicit_ask(self) -> None:
+        design = (ROOT / "skills/codebase-design/SKILL.md").read_text(encoding="utf-8")
+        twice = (ROOT / "skills/codebase-design/DESIGN-IT-TWICE.md").read_text(encoding="utf-8")
+        self.assertIn("use it only when the user asks for it", design)
+        self.assertIn("Run this only when the user asks", twice)
 
     def test_orchestrate_uses_host_native_variants(self) -> None:
         source = ROOT / "skills/orchestrate"
-        codex = ROOT / "plugins/agent-control/skills/orchestrate"
-        claude = ROOT / "adapters/claude/plugins/agent-control/skills/orchestrate"
+        codex = ROOT / "plugins" / SUITE / "skills/orchestrate"
+        claude = ROOT / "adapters/claude/plugins" / SUITE / "skills/orchestrate"
         self.assertEqual((source / "SKILL.md").read_bytes(), (codex / "SKILL.md").read_bytes())
         native = (source / "variants/claude.md").read_text(encoding="utf-8")
         generated = (claude / "SKILL.md").read_text(encoding="utf-8")
@@ -173,21 +220,6 @@ class DistributionTests(unittest.TestCase):
                 digest, hashlib.sha256((archive / path).read_bytes()).hexdigest(), relative
             )
 
-    def test_comment_discipline_rejects_comment_backed_shortcuts(self) -> None:
-        skill = (ROOT / "skills" / "comment-discipline" / "SKILL.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("Comments are not implementation", skill)
-        self.assertIn("fix the root cause", skill)
-        self.assertIn("Treat comment-shaped directives as executable code", skill)
-        self.assertIn("Never measure success by deletion count", skill)
-
-    def test_frontmatter_names_match_folders_and_descriptions_are_compact(self) -> None:
-        for name in ALL_SKILLS:
-            fields = frontmatter(ROOT / "skills" / name / "SKILL.md")
-            self.assertEqual(name, fields.get("name"), name)
-            self.assertLessEqual(len(fields["description"]), 180, name)
-
     def test_skill_references_resolve_and_stale_syntax_is_absent(self) -> None:
         skill_reference = re.compile(r"\$([a-z][a-z0-9-]+)")
         slash_reference = re.compile(r"`/[a-z][a-z0-9-]+`")
@@ -202,6 +234,7 @@ class DistributionTests(unittest.TestCase):
         origin = (ROOT / "ORIGIN.md").read_text(encoding="utf-8")
         self.assertIn("anthropics/skills", origin)
         self.assertIn("obra/superpowers", origin)
+        self.assertIn("mattpocock/skills", origin)
         apache = (ROOT / "skills" / "frontend-design" / "LICENSE.txt").read_text(encoding="utf-8")
         self.assertIn("Apache License", apache)
 

@@ -1,0 +1,8 @@
+interface:
+  display_name: "Frontend Design"
+  short_description: "Distinctive, deliberate interface design"
+  default_prompt: "Give this interface a distinctive, intentional visual direction."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: true

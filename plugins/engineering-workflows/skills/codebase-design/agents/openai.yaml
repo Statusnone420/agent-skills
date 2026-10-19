@@ -1,7 +1,0 @@
-interface:
-  display_name: "Codebase Design"
-  short_description: "Design deeper modules and cleaner seams"
-  icon_small: "./assets/icon.png"
-  icon_large: "./assets/icon.png"
-policy:
-  allow_implicit_invocation: false

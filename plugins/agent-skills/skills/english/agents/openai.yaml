@@ -1,0 +1,8 @@
+interface:
+  display_name: "English"
+  short_description: "Plain-English explanation, no action"
+  default_prompt: "Explain the selected text or current situation in plain English without taking action."
+  icon_small: "./assets/icon.png"
+  icon_large: "./assets/icon.png"
+policy:
+  allow_implicit_invocation: false
