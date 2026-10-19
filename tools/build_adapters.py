@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import tempfile
@@ -15,6 +16,7 @@ PLUGIN_ASSETS = ROOT / "assets" / "plugins"
 # marketplace source, so no other host's copy may live there.
 CODEX_PLUGINS = ROOT / "adapters" / "codex" / "plugins"
 CLAUDE_PLUGINS = ROOT / "adapters" / "claude" / "plugins"
+GROK_BOT = ROOT / "adapters" / "grok-bot"
 CODEX_MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
 CLAUDE_MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
 
@@ -27,6 +29,23 @@ MARKETPLACE_DISPLAY_NAME = "Agent Skills"
 MARKETPLACE_DESCRIPTION = "One plugin of focused agent skills, maintained by Statusnone."
 CLAUDE_ONLY_FRONTMATTER = "disable-model-invocation:"
 YAML_RESERVED_STARTS = tuple("[{&*!|>%@`#")
+# Agent Skills fields minus allowed-tools, whose tool names are host-specific:
+# https://agentskills.io/specification
+PORTABLE_FRONTMATTER = frozenset({"name", "description", "license", "compatibility", "metadata"})
+GROK_BOT_LEFT_OUT = frozenset({"assets", "variants"})
+GROK_BOT_TRANSLATION = (
+    "- **Subagents and sub-agents** (`orchestrate` and `skills/codebase-design/DESIGN-IT-TWICE.md`): "
+    "use Grok Bot background workers or cloud agents, with the same rules. Give each one concrete "
+    "output, let no two assignments overlap, and have the parent integrate and verify the results.",
+    "- **\"The models and effort levels the current Codex session exposes\"** (`orchestrate`): use the "
+    "models Grok Bot offers. If the user named no model, ask which to use. Never choose Fast unless "
+    "the user asks for it. Ignore `variants/claude.SKILL.md`, the Claude Code edition.",
+    "- **`$skill-name` references**, such as `$codebase-design`: run that sub-skill from this bundle.",
+    "- **Steps that edit code, run tests, or use Git:** do them in a cloud agent on the connected "
+    "repository. Never commit, push, merge, or publish without the user's explicit approval.",
+    "- **\"Do not use tools\"** (`english`): answer from the conversation only, and take no actions in "
+    "that reply.",
+)
 
 
 def write_text_lf(path: Path, text: str) -> None:
@@ -229,6 +248,105 @@ def copy_skills(names: tuple[str, ...], destination: Path, host: str) -> None:
             raise ValueError(f"Unsupported host: {host}")
 
 
+def split_frontmatter(text: str) -> tuple[list[str], str]:
+    closing = text.find("\n---", 4)
+    if not text.startswith("---\n") or closing == -1:
+        raise ValueError("Missing frontmatter markers")
+    return text[4:closing].splitlines(), text[closing:]
+
+
+def portable_frontmatter(text: str) -> str:
+    lines, rest = split_frontmatter(text)
+    kept = []
+    keep = False
+    for line in lines:
+        if line[:1] not in ("", " ", "\t", "-"):
+            keep = line.partition(":")[0].strip() in PORTABLE_FRONTMATTER
+        if keep:
+            kept.append(line)
+    return "---\n" + "\n".join(kept) + rest
+
+
+def frontmatter_value(text: str, key: str) -> str:
+    lines, _ = split_frontmatter(text)
+    for line in lines:
+        field, separator, value = line.partition(":")
+        if separator and field == key:
+            value = value.strip()
+            if len(value) > 1 and value[0] == value[-1] and value[0] in "'\"":
+                value = value[1:-1]
+            return value
+    raise ValueError(f"Missing frontmatter field: {key}")
+
+
+def copy_portable_skills(names: tuple[str, ...], destination: Path) -> None:
+    destination.mkdir(parents=True)
+    for name in names:
+        skill_dir = destination / name
+        shutil.copytree(SOURCE / name, skill_dir)
+        for folder in sorted(GROK_BOT_LEFT_OUT):
+            if (skill_dir / folder).is_dir():
+                shutil.rmtree(skill_dir / folder)
+        skill_md = skill_dir / "SKILL.md"
+        write_text_lf(skill_md, portable_frontmatter(skill_md.read_text(encoding="utf-8")))
+
+
+def bundle_fingerprint(skills: Path, router: str) -> str:
+    digest = hashlib.sha256(router.encode("utf-8"))
+    for path in sorted(files_under(skills), key=Path.as_posix):
+        data = (skills / path).read_bytes()
+        digest.update(f"\0{path.as_posix()}\0{len(data)}\0".encode("utf-8"))
+        digest.update(data)
+    return digest.hexdigest()[:12]
+
+
+def grok_bot_router(name: str, plugin: PluginDefinition, skills: Path) -> str:
+    entries = [
+        f"- `{skill}`: "
+        + frontmatter_value((skills / skill / "SKILL.md").read_text(encoding="utf-8"), "description")
+        for skill in plugin.skills
+    ]
+    lines = [
+        "---",
+        f"name: {name}",
+        f"description: Use this when the user invokes one of the {name} by name "
+        f"({', '.join(plugin.skills)}).",
+        "---",
+        "",
+        f"# {plugin.display_name}",
+        "",
+        f"Manual only. Run a sub-skill only when the user names it. If the user says {name} without a "
+        f"skill name, list the {len(plugin.skills)} sub-skills below and ask which one to run.",
+        "",
+        "To run a sub-skill, read `skills/<name>/SKILL.md` next to this file and follow it. Open its "
+        "helper files only when that skill says to.",
+        "",
+        "## Sub-skills",
+        "",
+        *entries,
+        "",
+        "## Grok Bot translation",
+        "",
+        "These skills were written for Codex and Claude Code. In Grok Bot, read them this way:",
+        "",
+        *GROK_BOT_TRANSLATION,
+        "",
+    ]
+    return "\n".join(lines) + "\n"
+
+
+def build_grok_bot_bundle(destination: Path, name: str, plugin: PluginDefinition) -> None:
+    skills = destination / "skills"
+    copy_portable_skills(plugin.skills, skills)
+    router = grok_bot_router(name, plugin, skills)
+    source = (
+        f"Source: {REPOSITORY}, version {plugin.version}, fingerprint "
+        f"`{bundle_fingerprint(skills, router)}`. License: {plugin.license}; see LICENSE, NOTICE.md, "
+        "and ORIGIN.md in the repository.\n"
+    )
+    write_text_lf(destination / "SKILL.md", router + source)
+
+
 def repository_path(path: Path) -> str:
     return "./" + path.relative_to(ROOT).as_posix()
 
@@ -319,14 +437,17 @@ def build_plugin(destination: Path, name: str, plugin: PluginDefinition, host: s
 def build_expected(root: Path) -> dict[Path, Path]:
     codex_root = root / "codex"
     claude_root = root / "claude"
+    grok_bot_root = root / "grok-bot"
     for name, plugin in PLUGINS.items():
         build_plugin(codex_root / name, name, plugin, "codex")
         build_plugin(claude_root / name, name, plugin, "claude")
+        build_grok_bot_bundle(grok_bot_root / name, name, plugin)
     write_json(root / "codex-marketplace.json", codex_marketplace())
     write_json(root / "claude-marketplace.json", claude_marketplace())
     return {
         codex_root: CODEX_PLUGINS,
         claude_root: CLAUDE_PLUGINS,
+        grok_bot_root: GROK_BOT,
         root / "codex-marketplace.json": CODEX_MARKETPLACE,
         root / "claude-marketplace.json": CLAUDE_MARKETPLACE,
     }
@@ -445,7 +566,10 @@ def validate_configuration() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Build Codex and Claude Code adapters and marketplaces from skills/ and the catalog."
+        description=(
+            "Build the Codex, Claude Code, and Grok Bot adapters and the marketplaces from skills/ "
+            "and the catalog."
+        )
     )
     parser.add_argument("--check", action="store_true", help="Verify generated files without writing.")
     args = parser.parse_args()
@@ -458,14 +582,20 @@ def main() -> int:
             for problem in problems:
                 print(f"- {problem}")
             return 1
-        print("Codex and Claude Code adapters and marketplaces match the catalog and canonical skills.")
+        print(
+            "Codex, Claude Code, and Grok Bot adapters and the marketplaces match the catalog and "
+            "canonical skills."
+        )
         return 0
 
     with tempfile.TemporaryDirectory(prefix="agent-skills-build-") as temp:
         for expected_path, actual_path in build_expected(Path(temp)).items():
             replace(expected_path, actual_path)
 
-    print("Built Codex and Claude Code adapters and marketplaces from the catalog and canonical skills.")
+    print(
+        "Built the Codex, Claude Code, and Grok Bot adapters and the marketplaces from the catalog "
+        "and canonical skills."
+    )
     return 0
 
 
