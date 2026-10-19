@@ -294,7 +294,8 @@ def copy_portable_skills(names: tuple[str, ...], destination: Path) -> None:
 def bundle_fingerprint(skills: Path, router: str) -> str:
     digest = hashlib.sha256(router.encode("utf-8"))
     for path in sorted(files_under(skills), key=Path.as_posix):
-        data = (skills / path).read_bytes()
+        # Git can check text out with CRLF on Windows; hash the LF form it commits.
+        data = (skills / path).read_bytes().replace(b"\r\n", b"\n")
         digest.update(f"\0{path.as_posix()}\0{len(data)}\0".encode("utf-8"))
         digest.update(data)
     return digest.hexdigest()[:12]

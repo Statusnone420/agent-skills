@@ -287,6 +287,17 @@ class DistributionTests(unittest.TestCase):
             if path.is_file():
                 self.assertNotRegex(path.read_text(encoding="utf-8"), r"[A-Za-z]:\\|/home/|/Users/", path)
 
+    def test_bundle_fingerprint_ignores_checkout_line_endings(self) -> None:
+        fingerprints = []
+        with tempfile.TemporaryDirectory() as temp:
+            for label, content in (("lf", b"Terms\nApply\n"), ("crlf", b"Terms\r\nApply\r\n"), ("edit", b"Terms\nChanged\n")):
+                skills = Path(temp) / label / "skills"
+                (skills / "sample").mkdir(parents=True)
+                (skills / "sample" / "LICENSE.txt").write_bytes(content)
+                fingerprints.append(build_adapters.bundle_fingerprint(skills, "router\n"))
+        self.assertEqual(fingerprints[0], fingerprints[1])
+        self.assertNotEqual(fingerprints[0], fingerprints[2])
+
     def test_drift_check_flags_a_stale_grok_bot_bundle(self) -> None:
         with tempfile.TemporaryDirectory() as temp:
             source = Path(temp) / "skills"

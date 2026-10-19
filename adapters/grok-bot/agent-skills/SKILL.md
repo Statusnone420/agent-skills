@@ -31,4 +31,4 @@ These skills were written for Codex and Claude Code. In Grok Bot, read them this
 - **Steps that edit code, run tests, or use Git:** do them in a cloud agent on the connected repository. Never commit, push, merge, or publish without the user's explicit approval.
 - **"Do not use tools"** (`english`): answer from the conversation only, and take no actions in that reply.
 
-Source: https://github.com/Statusnone420/agent-skills, version 1.1.0, fingerprint `442d5c12a5b9`. License: MIT AND Apache-2.0; see LICENSE, NOTICE.md, and ORIGIN.md in the repository.
+Source: https://github.com/Statusnone420/agent-skills, version 1.1.0, fingerprint `ceee79557415`. License: MIT AND Apache-2.0; see LICENSE, NOTICE.md, and ORIGIN.md in the repository.
