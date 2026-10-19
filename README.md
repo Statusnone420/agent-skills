@@ -34,14 +34,15 @@ that plugin; there are no sub-plugins.
 **On its own** means the agent loads the skill when a request matches its description. You can also
 call it by name. **Manual only** means the skill runs only when you call it: `orchestrate` starts
 subagents, which cost time and tokens, and `english` refuses tool use, which would stop real work if
-it fired by itself.
+it fired by itself. Grok Build is an exception when Claude Code also has the plugin; see
+[Grok Build CLI](#grok-build-cli).
 
 ## Calling a skill
 
 | Host | Call it by name | Manual-only setting |
 |---|---|---|
 | **Claude Code** | `/agent-skills:english`, or `/english` when no other command uses that name | `disable-model-invocation: true` |
-| **Codex** | Pick it with `$`. Codex source names plugin skills `agent-skills:english`; not yet tested here. | `allow_implicit_invocation: false` |
+| **Codex** | `$agent-skills:english`. Plain `$english` does not find a plugin skill. | `allow_implicit_invocation: false` |
 
 The catalog in `tools/build_adapters.py` sets each skill's mode, and tests check that the generated
 Codex and Claude Code settings match it. Delegation never expands the user's authorization,
@@ -54,8 +55,9 @@ substituting. The Claude Code variant contains no Codex model names or custom ag
 
 ## Load the skills
 
-**Checked** means this repository's own checks, a host's CLI help, or a host's validator confirmed
-it. **Docs** means it comes from the host's documentation but was not run end to end here.
+**Checked** means we ran it here on Windows with the host version named, or this repository's own
+checks, a host's CLI help, or a host's validator confirmed it. Each label says which. **Docs** means
+it comes from the host's documentation but was not run end to end here.
 **Unverified** means it is our best reading and still needs a real test.
 
 ### Claude Code (terminal, IDE, and the Code tab in Claude Desktop)
@@ -69,7 +71,10 @@ In a session on Claude Code 2.1.275 or later, one line works too:
 `/plugin install agent-skills --marketplace Statusnone420/agent-skills`. Update with
 `claude plugin marketplace update statusnone-agent-skills`, then
 `claude plugin update agent-skills@statusnone-agent-skills`. Call a skill with
-`/agent-skills:english`. **Checked:** command names and strict plugin validation.
+`/agent-skills:english`. **Checked** on Claude Code 2.1.302: the two install commands,
+`/agent-skills:english`, `/english`, and `diagnosing-bugs` loading on its own. `english` and
+`orchestrate` were not among the skills the model could call. Strict plugin validation passes. The
+update commands and the one-line install are checked by command name only.
 
 ### Claude on the web and Claude Desktop chat
 
@@ -87,10 +92,12 @@ codex plugin add agent-skills@statusnone-agent-skills
 ```
 
 You can also install from `/plugins` in a session. Start a new session after installing, and refresh
-later with `codex plugin marketplace upgrade`. Pick a skill with `$`. **Checked:** command names
-(Codex CLI 0.162.1 help) and every skill with `quick_validate.py`. **Unverified:** the app steps and
-the `agent-skills:english` name that Codex source code gives plugin skills. The IDE extension does
-not support plugins. **Docs.**
+later with `codex plugin marketplace upgrade`. Call a skill with `$agent-skills:english`; plain
+`$english` does not find it. **Checked** on Codex CLI 0.162.1: `codex plugin add`, the upgrade,
+`$agent-skills:english`, and `diagnosing-bugs` loading on its own. Codex lists only the seven
+automatic skills to the model, so `english` and `orchestrate` did not load on their own.
+`codex plugin marketplace add` is checked by CLI help, and every skill passes `quick_validate.py`.
+**Unverified:** `/plugins` and the Codex app. The IDE extension does not support plugins. **Docs.**
 
 ### ChatGPT
 
@@ -104,12 +111,21 @@ marketplace. **Docs.** On other plans, use Codex.
 ```sh
 grok plugin marketplace add Statusnone420/agent-skills
 grok plugin install agent-skills --trust
+grok plugin enable agent-skills
 ```
 
-Grok reads the Claude Code marketplace, so it needs no separate copy. Plugins start disabled:
-enable `agent-skills` in the Plugins tab or list it under `[plugins] enabled` in
-`~/.grok/config.toml`. Call a skill with `/agent-skills:english`. **Checked:** `grok plugin validate`
-accepts the plugin. **Docs:** the install and enable steps.
+Grok reads the Claude Code marketplace, so it needs no separate copy. If Claude Code already has the
+marketplace, Grok sees it too and the first line fails with "already configured"; skip it. Plugins
+start disabled. `grok plugin enable` lists `agent-skills` under `[plugins] enabled` in
+`~/.grok/config.toml`; the Plugins tab works too. Call a skill with `/agent-skills:english`.
+**Checked** on Grok 1.0.52 with Claude Code installed: install, enable, `/agent-skills:english`, and
+`diagnosing-bugs` loading on its own. `grok plugin validate` accepts the plugin. **Docs:** the
+Plugins tab. **Unverified:** Grok without Claude Code.
+
+When Claude Code also has `agent-skills` installed, Grok loads the skills from Claude Code's copy of
+this repository at `plugins/agent-skills/`. That is the Codex copy, which has no
+`disable-model-invocation` line, so `english` and `orchestrate` can load on their own in Grok.
+**Checked** on Grok 1.0.52. Whether Grok honors that line without Claude Code is **Unverified**.
 
 ### Cursor and Cursor Grok Bots
 
@@ -151,8 +167,8 @@ codex plugin remove frontend-design@statusnone-agent-skills
 codex plugin add agent-skills@statusnone-agent-skills
 ```
 
-Then start a new session. The command names come from the CLI help; the upgrade itself has not been
-run here.
+Then start a new session. **Checked** on Codex CLI 0.162.1: these steps replaced all four old
+plugins with `agent-skills` 1.1.0.
 
 ## Distribution model
 
