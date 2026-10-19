@@ -1,7 +1,7 @@
 {
   "name": "communication-tools",
   "version": "0.4.1",
-  "description": "Manual-only plain-English and concise communication assistance.",
+  "description": "Explicit-only tools for clearer, denser technical communication.",
   "author": {
     "name": "Statusnone"
   },

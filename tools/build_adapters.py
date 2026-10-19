@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import argparse
-import filecmp
+import json
 import shutil
 import tempfile
 from dataclasses import dataclass
@@ -13,11 +13,26 @@ SOURCE = ROOT / "skills"
 PLUGIN_ASSETS = ROOT / "assets" / "plugins"
 CODEX_PLUGINS = ROOT / "plugins"
 CLAUDE_PLUGINS = ROOT / "adapters" / "claude" / "plugins"
+CODEX_MARKETPLACE = ROOT / ".agents" / "plugins" / "marketplace.json"
+CLAUDE_MARKETPLACE = ROOT / ".claude-plugin" / "marketplace.json"
+
+AUTHOR = "Statusnone"
+AUTHOR_URL = "https://github.com/Statusnone420"
+REPOSITORY = "https://github.com/Statusnone420/agent-skills"
+PLUGIN_ICON = "./assets/plugin-icon.png"
+MARKETPLACE_NAME = "statusnone-agent-skills"
+MARKETPLACE_DISPLAY_NAME = "Statusnone Agent Skills"
+MARKETPLACE_DESCRIPTION = "Explicit-only personal workflows maintained by Statusnone."
 
 
 def write_text_lf(path: Path, text: str) -> None:
     with path.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(text)
+
+
+def write_json(path: Path, data: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    write_text_lf(path, json.dumps(data, indent=2, ensure_ascii=False) + "\n")
 
 
 @dataclass(frozen=True)
@@ -29,8 +44,18 @@ class SkillMetadata:
 
 @dataclass(frozen=True)
 class PluginDefinition:
-    codex_skills: tuple[str, ...]
-    claude_skills: tuple[str, ...]
+    skills: tuple[str, ...]
+    version: str
+    description: str
+    display_name: str
+    short_description: str
+    long_description: str
+    category: str
+    capabilities: tuple[str, ...]
+    keywords: tuple[str, ...]
+    brand_color: str
+    default_prompts: tuple[str, ...]
+    license: str = "MIT"
 
 
 SKILLS = {
@@ -100,7 +125,7 @@ HOST_VARIANTS = {
 
 PLUGINS = {
     "engineering-workflows": PluginDefinition(
-        codex_skills=(
+        skills=(
             "grill-me",
             "domain-modeling",
             "diagnosing-bugs",
@@ -112,30 +137,92 @@ PLUGINS = {
             "repository-docs",
             "maintaining-docs",
         ),
-        claude_skills=(
-            "grill-me",
-            "domain-modeling",
-            "diagnosing-bugs",
-            "comment-discipline",
+        version="0.5.1",
+        description=(
+            "Explicit-only engineering, debugging, comment discipline, design, planning, "
+            "contract review, and documentation workflows."
+        ),
+        display_name="Engineering Workflows",
+        short_description="Manual engineering and planning workflows",
+        long_description=(
+            "Ten explicit-only workflows for planning, domain modeling, debugging, comment "
+            "discipline, TDD, codebase design, conceptual and contract review, and repository "
+            "documentation."
+        ),
+        category="Developer Tools",
+        capabilities=("Interactive", "Read", "Write"),
+        keywords=(
+            "engineering",
+            "debugging",
+            "comments",
             "tdd",
-            "codebase-design",
-            "conceptual-review",
-            "contract-review",
-            "repository-docs",
-            "maintaining-docs",
+            "planning",
+            "domain-modeling",
+            "reasoning",
+        ),
+        brand_color="#6D4AFF",
+        default_prompts=(
+            "Use $grill-me to stress-test this plan.",
+            "Use $diagnosing-bugs to diagnose this issue.",
+            "Use $comment-discipline to prevent comment-backed shortcuts and clean up comment debt in this scope.",
         ),
     ),
     "communication-tools": PluginDefinition(
-        codex_skills=("english", "concise"),
-        claude_skills=("english", "concise"),
+        skills=("english", "concise"),
+        version="0.4.1",
+        description="Explicit-only tools for clearer, denser technical communication.",
+        display_name="Communication Tools",
+        short_description="Manual clear communication",
+        long_description="Two explicit-only tools for plain-English rescue and compression without loss.",
+        category="Productivity",
+        capabilities=("Interactive", "Read"),
+        keywords=("communication", "plain-english", "concise", "explanation"),
+        brand_color="#7C4DFF",
+        default_prompts=(
+            "Use $english to explain this in plain language.",
+            "Use $concise to compress this answer without losing important information.",
+        ),
     ),
     "agent-control": PluginDefinition(
-        codex_skills=("orchestrate", "superpowers"),
-        claude_skills=("orchestrate", "superpowers"),
+        skills=("orchestrate", "superpowers"),
+        version="0.3.1",
+        description=(
+            "Explicit-only workflows for proportional development discipline and bounded agent "
+            "coordination."
+        ),
+        display_name="Agent Control",
+        short_description="Manual coordination and development control",
+        long_description=(
+            "Two explicit-only workflows for proportional development discipline and bounded agent "
+            "coordination."
+        ),
+        category="Developer Tools",
+        capabilities=("Interactive", "Read", "Write"),
+        keywords=("agents", "orchestration", "delegation", "workflow", "superpowers"),
+        brand_color="#7C3AED",
+        default_prompts=(
+            "Use $superpowers for a compact build-and-verify workflow.",
+            "Use $orchestrate to coordinate this large-scope task.",
+        ),
     ),
     "frontend-design": PluginDefinition(
-        codex_skills=("frontend-design",),
-        claude_skills=("frontend-design",),
+        skills=("frontend-design",),
+        version="0.1.1",
+        description="Statusnone-maintained guidance for distinctive, intentional interface design.",
+        display_name="Frontend Design",
+        short_description="Distinctive intentional interface design",
+        long_description=(
+            "An explicit-only Statusnone-maintained Codex and Claude adaptation for opinionated, "
+            "subject-specific interface design."
+        ),
+        category="Design",
+        capabilities=("Read", "Write"),
+        keywords=("frontend", "design", "ui", "ux", "visual-direction"),
+        brand_color="#8B5CF6",
+        default_prompts=(
+            "Use $frontend-design to give this interface a distinctive visual direction.",
+        ),
+        license="Apache-2.0",
     ),
 }
 
@@ -208,49 +295,163 @@ def copy_skills(names: tuple[str, ...], destination: Path, host: str) -> None:
             raise ValueError(f"Unsupported host: {host}")
 
 
+def repository_path(path: Path) -> str:
+    return "./" + path.relative_to(ROOT).as_posix()
+
+
+def codex_manifest(name: str, plugin: PluginDefinition) -> dict:
+    return {
+        "name": name,
+        "version": plugin.version,
+        "description": plugin.description,
+        "author": {"name": AUTHOR, "url": AUTHOR_URL},
+        "repository": REPOSITORY,
+        "license": plugin.license,
+        "keywords": list(plugin.keywords),
+        "skills": "./skills/",
+        "interface": {
+            "displayName": plugin.display_name,
+            "shortDescription": plugin.short_description,
+            "longDescription": plugin.long_description,
+            "composerIcon": PLUGIN_ICON,
+            "logo": PLUGIN_ICON,
+            "logoDark": PLUGIN_ICON,
+            "brandColor": plugin.brand_color,
+            "developerName": AUTHOR,
+            "category": plugin.category,
+            "capabilities": list(plugin.capabilities),
+            "websiteURL": REPOSITORY,
+            "defaultPrompt": list(plugin.default_prompts),
+        },
+    }
+
+
+def claude_manifest(name: str, plugin: PluginDefinition) -> dict:
+    return {
+        "name": name,
+        "version": plugin.version,
+        "description": plugin.description,
+        "author": {"name": AUTHOR},
+        "homepage": REPOSITORY,
+        "repository": REPOSITORY,
+        "license": plugin.license,
+        "keywords": list(plugin.keywords),
+    }
+
+
+def codex_marketplace() -> dict:
+    return {
+        "name": MARKETPLACE_NAME,
+        "interface": {"displayName": MARKETPLACE_DISPLAY_NAME},
+        "plugins": [
+            {
+                "name": name,
+                "source": {"source": "local", "path": repository_path(CODEX_PLUGINS / name)},
+                "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"},
+                "category": plugin.category,
+            }
+            for name, plugin in PLUGINS.items()
+        ],
+    }
+
+
+def claude_marketplace() -> dict:
+    return {
+        "name": MARKETPLACE_NAME,
+        "owner": {"name": AUTHOR},
+        "description": MARKETPLACE_DESCRIPTION,
+        "plugins": [
+            {
+                "name": name,
+                "source": repository_path(CLAUDE_PLUGINS / name),
+                "description": plugin.description,
+                "version": plugin.version,
+                "author": {"name": AUTHOR},
+            }
+            for name, plugin in PLUGINS.items()
+        ],
+    }
+
+
+def build_plugin(destination: Path, name: str, plugin: PluginDefinition, host: str) -> None:
+    copy_skills(plugin.skills, destination / "skills", host)
+    shutil.copytree(PLUGIN_ASSETS / name, destination / "assets")
+    if host == "codex":
+        write_json(destination / ".codex-plugin" / "plugin.json", codex_manifest(name, plugin))
+    else:
+        write_json(destination / ".claude-plugin" / "plugin.json", claude_manifest(name, plugin))
+
+
 def build_expected(root: Path) -> dict[Path, Path]:
-    expected: dict[Path, Path] = {}
-    for plugin_name, definition in PLUGINS.items():
-        codex_root = root / "codex" / plugin_name
-        claude_root = root / "claude" / plugin_name
-        copy_skills(definition.codex_skills, codex_root / "skills", "codex")
-        copy_skills(definition.claude_skills, claude_root / "skills", "claude")
-        shutil.copytree(PLUGIN_ASSETS / plugin_name, codex_root / "assets")
-        shutil.copytree(PLUGIN_ASSETS / plugin_name, claude_root / "assets")
-        expected[codex_root / "skills"] = CODEX_PLUGINS / plugin_name / "skills"
-        expected[codex_root / "assets"] = CODEX_PLUGINS / plugin_name / "assets"
-        expected[claude_root / "skills"] = CLAUDE_PLUGINS / plugin_name / "skills"
-        expected[claude_root / "assets"] = CLAUDE_PLUGINS / plugin_name / "assets"
-    return expected
+    codex_root = root / "codex"
+    claude_root = root / "claude"
+    for name, plugin in PLUGINS.items():
+        build_plugin(codex_root / name, name, plugin, "codex")
+        build_plugin(claude_root / name, name, plugin, "claude")
+    write_json(root / "codex-marketplace.json", codex_marketplace())
+    write_json(root / "claude-marketplace.json", claude_marketplace())
+    return {
+        codex_root: CODEX_PLUGINS,
+        claude_root: CLAUDE_PLUGINS,
+        root / "codex-marketplace.json": CODEX_MARKETPLACE,
+        root / "claude-marketplace.json": CLAUDE_MARKETPLACE,
+    }
 
 
-def compare_dirs(expected: Path, actual: Path) -> list[str]:
+def display(path: Path) -> str:
+    try:
+        return path.relative_to(ROOT).as_posix()
+    except ValueError:
+        return path.as_posix()
+
+
+def files_under(root: Path) -> set[Path]:
+    return {path.relative_to(root) for path in root.rglob("*") if path.is_file()}
+
+
+def compare(expected: Path, actual: Path) -> list[str]:
+    if expected.is_file():
+        if not actual.is_file():
+            return [f"missing: {display(actual)}"]
+        if expected.read_bytes() != actual.read_bytes():
+            return [f"changed: {display(actual)}"]
+        return []
     if not actual.is_dir():
-        return [f"missing directory: {actual}"]
-    comparison = filecmp.dircmp(expected, actual)
-    problems: list[str] = []
-
-    def walk(node: filecmp.dircmp, prefix: Path) -> None:
-        for name in node.left_only:
-            problems.append(f"missing: {prefix / name}")
-        for name in node.right_only:
-            problems.append(f"unexpected: {prefix / name}")
-        for name in node.diff_files:
-            problems.append(f"changed: {prefix / name}")
-        for name in node.funny_files:
-            problems.append(f"unreadable: {prefix / name}")
-        for name, child in node.subdirs.items():
-            walk(child, prefix / name)
-
-    walk(comparison, Path("."))
+        return [f"missing: {display(actual)}"]
+    expected_files = files_under(expected)
+    actual_files = files_under(actual)
+    problems = [f"missing: {display(actual / path)}" for path in sorted(expected_files - actual_files)]
+    problems += [
+        f"unexpected: {display(actual / path)}" for path in sorted(actual_files - expected_files)
+    ]
+    problems += [
+        f"changed: {display(actual / path)}"
+        for path in sorted(expected_files & actual_files)
+        if (expected / path).read_bytes() != (actual / path).read_bytes()
+    ]
     return problems
 
 
-def replace_tree(source: Path, destination: Path) -> None:
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    if destination.exists():
+def find_drift() -> list[str]:
+    with tempfile.TemporaryDirectory(prefix="agent-skills-build-") as temp:
+        expected = build_expected(Path(temp))
+        return [
+            problem
+            for expected_path, actual_path in expected.items()
+            for problem in compare(expected_path, actual_path)
+        ]
+
+
+def replace(source: Path, destination: Path) -> None:
+    if destination.is_dir():
         shutil.rmtree(destination)
-    shutil.copytree(source, destination)
+    elif destination.exists():
+        destination.unlink()
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if source.is_dir():
+        shutil.copytree(source, destination)
+    else:
+        shutil.copyfile(source, destination)
 
 
 def validate_configuration() -> None:
@@ -258,13 +459,14 @@ def validate_configuration() -> None:
     if names != set(SKILLS):
         raise SystemExit(f"Canonical skill set mismatch: {sorted(names)}")
 
-    codex_names = [name for plugin in PLUGINS.values() for name in plugin.codex_skills]
-    if len(codex_names) != len(set(codex_names)) or set(codex_names) != set(SKILLS):
-        raise SystemExit("Every canonical skill must belong to exactly one Codex plugin.")
+    memberships = [name for plugin in PLUGINS.values() for name in plugin.skills]
+    if len(memberships) != len(set(memberships)) or set(memberships) != set(SKILLS):
+        raise SystemExit("Every canonical skill must belong to exactly one plugin.")
 
-    for plugin_name, definition in PLUGINS.items():
-        if not set(definition.claude_skills).issubset(definition.codex_skills):
-            raise SystemExit(f"Claude skills must be a subset of Codex skills: {plugin_name}")
+    artwork = {path.name for path in PLUGIN_ASSETS.iterdir() if path.is_dir()}
+    if artwork != set(PLUGINS):
+        raise SystemExit(f"Plugin artwork mismatch: {sorted(artwork)}")
+    for plugin_name in PLUGINS:
         if not (PLUGIN_ASSETS / plugin_name / "plugin-icon.png").is_file():
             raise SystemExit(f"Missing canonical plugin icon: {plugin_name}")
 
@@ -284,31 +486,27 @@ def validate_configuration() -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Build Codex and Claude Code skill adapters."
+        description="Build Codex and Claude Code adapters and marketplaces from skills/ and the catalog."
     )
-    parser.add_argument("--check", action="store_true", help="Verify generated adapters without writing.")
+    parser.add_argument("--check", action="store_true", help="Verify generated files without writing.")
     args = parser.parse_args()
     validate_configuration()
 
-    with tempfile.TemporaryDirectory(prefix="agent-skills-build-") as temp:
-        expected = build_expected(Path(temp))
-        if args.check:
-            problems = [
-                problem
-                for expected_path, actual_path in expected.items()
-                for problem in compare_dirs(expected_path, actual_path)
-            ]
-            if problems:
-                print("Adapter drift detected:")
-                for problem in problems:
-                    print(f"- {problem}")
-                return 1
-            print("Codex and Claude Code adapters match canonical skills.")
-            return 0
-        for expected_path, actual_path in expected.items():
-            replace_tree(expected_path, actual_path)
+    if args.check:
+        problems = find_drift()
+        if problems:
+            print("Adapter drift detected:")
+            for problem in problems:
+                print(f"- {problem}")
+            return 1
+        print("Codex and Claude Code adapters and marketplaces match the catalog and canonical skills.")
+        return 0
 
-    print("Built Codex and Claude Code adapters from canonical skills.")
+    with tempfile.TemporaryDirectory(prefix="agent-skills-build-") as temp:
+        for expected_path, actual_path in build_expected(Path(temp)).items():
+            replace(expected_path, actual_path)
+
+    print("Built Codex and Claude Code adapters and marketplaces from the catalog and canonical skills.")
     return 0
 
 
